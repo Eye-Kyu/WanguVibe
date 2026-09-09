@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Sale = require('../models/Sale');
-const Product = require('../models/Product');
+const Variant = require('../models/Variant');
 
 // % change from prev to current; null when no previous data
 const trendPct = (current, prev) =>
@@ -74,24 +74,32 @@ router.get('/summary', async (req, res) => {
                 { $group: { _id: null, total: { $sum: '$totalAmount' } } },
             ]),
 
-            Product.aggregate([
+            Variant.aggregate([
                 { $group: { _id: null, total: { $sum: '$stock' } } },
             ]),
 
+            // Best sellers grouped by style name (denormalized onto each sale
+            // line at checkout, so this doesn't need a $lookup against a
+            // style that may have since changed or been deleted)
             Sale.aggregate([
                 { $match: { createdAt: { $gte: rangeStart } } },
                 { $unwind: '$items' },
-                { $group: { _id: '$items.product', qty: { $sum: '$items.quantity' } } },
+                { $group: { _id: '$items.styleName', qty: { $sum: '$items.quantity' } } },
                 { $sort: { qty: -1 } },
                 { $limit: 5 },
-                { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'product' } },
-                { $unwind: '$product' },
-                { $project: { name: '$product.name', qty: 1 } },
+                { $project: { name: '$_id', qty: 1, _id: 0 } },
             ]),
 
-            Product.find({}, 'name stock').lean(),
+            Variant.find({ active: true }, 'size color stock')
+                .populate('style', 'name')
+                .lean(),
 
-            Product.find({ stock: { $lt: 10 } }, 'name stock').lean(),
+            // Low stock is per-variant against that variant's own reorderThreshold
+            // (a boutique's "low" for one size/color is much smaller than a
+            // mini-mart's flat count), not a hardcoded "< 10"
+            Variant.find({ $expr: { $lt: ['$stock', '$reorderThreshold'] }, active: true }, 'size color stock reorderThreshold')
+                .populate('style', 'name')
+                .lean(),
 
             Sale.aggregate([
                 { $match: { createdAt: { $gte: rangeStart } } },
@@ -141,10 +149,21 @@ router.get('/summary', async (req, res) => {
         const weekTrend  = trendPct(weekAgg[0]?.total  || 0, prevWeekAgg[0]?.total  || 0);
 
         // ── Format response ──────────────────────────────────────────
+        const paymentLabels = { mpesa: 'M-Pesa', cash: 'Cash', card: 'Card' };
         const paymentBreakdown = paymentAgg.map(p => ({
-            name:  p._id === 'mpesa' ? 'M-Pesa' : 'Cash',
+            name:  paymentLabels[p._id] || p._id,
             total: p.total,
             count: p.count,
+        }));
+
+        // Variant stock levels/low-stock read as "Style Name (Size/Color)" —
+        // the boutique equivalent of the mini-mart's flat product name
+        const nameVariant = v => `${v.style?.name || 'Unknown'} (${v.size}/${v.color})`;
+        const stockLevelsFormatted = stockLevels.map(v => ({ name: nameVariant(v), stock: v.stock }));
+        const lowStockItemsFormatted = lowStockItems.map(v => ({
+            name: nameVariant(v),
+            stock: v.stock,
+            reorderThreshold: v.reorderThreshold,
         }));
 
         const chartData = chartAgg.map(({ _id, total, count }) => ({
@@ -177,12 +196,12 @@ router.get('/summary', async (req, res) => {
             // ── Charts ──────────────────────────────────────
             chartData,
             topProducts,
-            stockLevels,
+            stockLevels: stockLevelsFormatted,
             paymentBreakdown,
 
             // ── Table + alerts ───────────────────────────────
             recentSales,
-            lowStockItems,
+            lowStockItems: lowStockItemsFormatted,
         });
 
     } catch (err) {

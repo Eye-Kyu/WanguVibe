@@ -1,9 +1,12 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
+// Thresholds tuned for per-variant (size/color) stock, which runs much
+// smaller than a mini-mart's flat per-product counts — holding 30 units of
+// one dress in one size/color would be unusual for a boutique.
 const stockColor = (stock) => {
     if (stock === 0)   return '#ef4444'; // red — out of stock
-    if (stock < 10)    return '#f59e0b'; // amber — critical
-    if (stock < 30)    return '#0ea5e9'; // blue — low
+    if (stock < 5)     return '#f59e0b'; // amber — critical
+    if (stock < 15)    return '#0ea5e9'; // blue — low
     return '#10b981';                    // green — healthy
 };
 
@@ -25,19 +28,19 @@ export default function BarChartStockLevels({ data = [] }) {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <div className="flex items-start justify-between mb-4">
                 <div>
-                    <h2 className="font-semibold text-gray-800">Product Stock Levels</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Current inventory across all products</p>
+                    <h2 className="font-semibold text-gray-800">Variant Stock Levels</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Current inventory across all size/color variants</p>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap justify-end">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Healthy (&ge;30)</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Low (&lt;30)</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Critical (&lt;10)</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Healthy (&ge;15)</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Low (&lt;15)</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Critical (&lt;5)</span>
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Out of stock</span>
                 </div>
             </div>
             {data.length === 0 ? (
                 <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-                    No product data available.
+                    No variant data available.
                 </div>
             ) : (
                 <ResponsiveContainer width="100%" height={300}>
@@ -57,7 +60,7 @@ export default function BarChartStockLevels({ data = [] }) {
                             tickLine={false}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                        <ReferenceLine y={10} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1.5} />
+                        <ReferenceLine y={5} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1.5} />
                         <Bar dataKey="stock" radius={[4, 4, 0, 0]} maxBarSize={48}>
                             {data.map((entry, i) => (
                                 <Cell key={i} fill={stockColor(entry.stock)} />

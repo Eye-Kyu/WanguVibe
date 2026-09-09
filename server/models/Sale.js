@@ -3,11 +3,17 @@ const mongoose = require('mongoose');
 const saleSchema = new mongoose.Schema({
   items: [
     {
-      product: {
+      variant: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
+        ref: 'Variant',
         required: true
       },
+      // Denormalized at sale time so a receipt/report still reads correctly
+      // even if the style/variant is later edited or deactivated.
+      styleName: { type: String, required: true },
+      size: { type: String, required: true },
+      color: { type: String, required: true },
+      unitPrice: { type: Number, required: true }, // price actually charged (basePrice or priceOverride) at sale time
       quantity: {
         type: Number,
         required: true
@@ -20,6 +26,11 @@ const saleSchema = new mongoose.Schema({
       }
     }
   ],
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    default: null
+  },
   totalAmount: {
     type: Number,
     required: true
@@ -32,8 +43,13 @@ const saleSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'mpesa'],
+    enum: ['cash', 'mpesa', 'card'],
     default: 'cash'
+  },
+  status: {
+    type: String,
+    enum: ['completed', 'partially_returned', 'returned'],
+    default: 'completed'
   },
   cashier: {
     type: mongoose.Schema.Types.ObjectId,

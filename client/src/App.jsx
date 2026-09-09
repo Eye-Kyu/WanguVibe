@@ -4,7 +4,7 @@ import POSPage from './pages/POSPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import SalesPage from './pages/admin/SalesPage';
-import ProductsPage from './pages/admin/ProductsPage';
+import StylesPage from './pages/admin/StylesPage';
 import UsersPage from './pages/admin/UsersPage';
 //import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -25,7 +25,7 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="sales" element={<SalesPage />} />
-          <Route path="products" element={<ProductsPage />} />
+          <Route path="styles" element={<StylesPage />} />
           <Route path="users" element={<UsersPage />} />
         </Route>
       </Routes>

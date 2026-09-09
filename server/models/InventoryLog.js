@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const inventoryLogSchema = new mongoose.Schema({
-    product: {
+    variant: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
+        ref: 'Variant',
         required: true
     },
     quantity: {

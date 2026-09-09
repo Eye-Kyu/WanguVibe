@@ -5,7 +5,9 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/auth');
-const productRoutes = require('./routes/products');
+const styleRoutes = require('./routes/styles');
+const variantRoutes = require('./routes/variants');
+const customerRoutes = require('./routes/customers');
 const salesRoutes = require('./routes/sales');
 const inventoryRoutes = require('./routes/inventory');
 const auditRoutes = require('./routes/audit');
@@ -23,7 +25,9 @@ app.use(express.json()); //  Parse JSON bodies
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
+app.use('/api/styles', styleRoutes);
+app.use('/api/variants', variantRoutes);
+app.use('/api/customers', customerRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/sales', salesRoutes);

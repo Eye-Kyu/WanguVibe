@@ -11,7 +11,7 @@ import BarChartStockLevels from '../../components/dashboard/BarChartStockLevels'
 const fmt = (n) =>
     Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const PAYMENT_COLORS = { Cash: '#2563eb', 'M-Pesa': '#16a34a' };
+const PAYMENT_COLORS = { Cash: '#2563eb', 'M-Pesa': '#16a34a', Card: '#9333ea' };
 
 const RANGE_LABELS = { day: 'Today', week: 'This Week', month: 'This Month' };
 
@@ -53,13 +53,17 @@ function StatPill({ label, value }) {
 
 // ─── Badge ──────────────────────────────────────────────────────────────────
 
+const PAYMENT_LABELS = { mpesa: 'M-Pesa', cash: 'Cash', card: 'Card' };
+const PAYMENT_BADGE_STYLES = {
+    mpesa: 'bg-green-100 text-green-700',
+    cash:  'bg-blue-100 text-blue-700',
+    card:  'bg-purple-100 text-purple-700',
+};
+
 function PaymentBadge({ method }) {
-    const isMpesa = method === 'mpesa';
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-            isMpesa ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-        }`}>
-            {isMpesa ? 'M-Pesa' : 'Cash'}
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${PAYMENT_BADGE_STYLES[method] || 'bg-gray-100 text-gray-700'}`}>
+            {PAYMENT_LABELS[method] || method}
         </span>
     );
 }
@@ -159,7 +163,7 @@ const AdminDashboard = () => {
                 <KpiCard
                     label="Best Seller"
                     value={data?.bestSeller || '—'}
-                    sub={data?.bestSeller ? `Top product — ${RANGE_LABELS[range]}` : 'No sales this period'}
+                    sub={data?.bestSeller ? `Top style — ${RANGE_LABELS[range]}` : 'No sales this period'}
                 />
             </div>
 
@@ -351,13 +355,13 @@ const AdminDashboard = () => {
                     {!data?.lowStockItems?.length ? (
                         <div className="px-5 py-10 text-center">
                             <p className="text-green-600 font-semibold text-sm">All stock healthy</p>
-                            <p className="text-gray-400 text-xs mt-1">No items below 10 units</p>
+                            <p className="text-gray-400 text-xs mt-1">No variants below their reorder threshold</p>
                         </div>
                     ) : (
                         <ul className="divide-y divide-gray-50">
-                            {data.lowStockItems.map(item => (
+                            {data.lowStockItems.map((item, idx) => (
                                 <li
-                                    key={item._id}
+                                    key={item._id || idx}
                                     className="px-5 py-3 flex items-center justify-between"
                                 >
                                     <span className="text-sm font-medium text-gray-700 truncate mr-2">

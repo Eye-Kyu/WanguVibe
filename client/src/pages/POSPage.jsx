@@ -6,15 +6,29 @@ import BarcodeScannerComponent from 'react-qr-barcode-scanner';
 import QRCode from 'qrcode';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import businessSettings from '../config/businessSettings';
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = memo(({ product, onAdd }) => {
-    const outOfStock = product.stock === 0;
-    const lowStock = product.stock > 0 && product.stock < 10;
+// ─── helpers ────────────────────────────────────────────────────────────────
+// Total stock across a style's variants, and its displayed price (a single
+// base price, or a "from X" when any variant overrides it).
+const styleStock = (style) => (style.variants || []).reduce((s, v) => s + (v.active === false ? 0 : v.stock), 0);
+const stylePriceLabel = (style) => {
+    const overrides = (style.variants || []).map(v => v.priceOverride).filter(p => p != null);
+    const prices = [style.basePrice, ...overrides];
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return min === max ? `KES ${min.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : `From KES ${min.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+};
+const variantPrice = (style, variant) => variant.priceOverride ?? style.basePrice;
+
+// ─── Style Card ───────────────────────────────────────────────────────────────
+const StyleCard = memo(({ style, onOpen }) => {
+    const totalStock = styleStock(style);
+    const outOfStock = totalStock === 0;
 
     return (
         <button
-            onClick={() => onAdd(product)}
+            onClick={() => onOpen(style)}
             disabled={outOfStock}
             className={`group relative bg-white rounded-xl border text-left transition-all duration-150 overflow-hidden
                 ${outOfStock
@@ -22,11 +36,10 @@ const ProductCard = memo(({ product, onAdd }) => {
                     : 'border-gray-200 hover:border-green-400 hover:shadow-md hover:shadow-green-100 active:scale-[0.97] shadow-sm'}`}
         >
             <div className="relative bg-gray-50 aspect-square overflow-hidden">
-                {product.image
-                    ? <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
-                    : <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">☕</div>
+                {style.images?.[0]
+                    ? <img src={style.images[0]} alt={style.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
+                    : <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">👗</div>
                 }
-                {/* Green "tap to add" cue on hover */}
                 {!outOfStock && (
                     <div className="absolute inset-0 bg-green-600/0 group-hover:bg-green-600/8 transition-colors duration-150 flex items-end justify-end p-2">
                         <div className="w-6 h-6 rounded-full bg-green-600 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center text-sm font-bold shadow">+</div>
@@ -37,36 +50,104 @@ const ProductCard = memo(({ product, onAdd }) => {
                         <span className="text-white text-xs font-semibold px-2 py-0.5 bg-red-600 rounded-full">Out of stock</span>
                     </div>
                 )}
-                {lowStock && !outOfStock && (
+                {!outOfStock && totalStock < 5 && (
                     <div className="absolute top-1.5 right-1.5">
-                        <span className="text-white text-[10px] font-bold px-1.5 py-0.5 bg-amber-500 rounded-full">{product.stock} left</span>
+                        <span className="text-white text-[10px] font-bold px-1.5 py-0.5 bg-amber-500 rounded-full">{totalStock} left</span>
                     </div>
                 )}
             </div>
             <div className="p-2.5">
-                <p className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">{product.name}</p>
-                {product.barcode && <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">{product.barcode}</p>}
+                <p className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">{style.name}</p>
+                {style.styleCode && <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">{style.styleCode}</p>}
                 <p className={`font-bold text-sm mt-1.5 ${outOfStock ? 'text-red-400' : 'text-green-700'}`}>
-                    KES {product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {stylePriceLabel(style)}
                 </p>
             </div>
         </button>
     );
 });
-ProductCard.displayName = 'ProductCard';
+StyleCard.displayName = 'StyleCard';
+
+// ─── Size/Color Picker ────────────────────────────────────────────────────────
+const VariantPicker = memo(({ style, onClose, onSelect }) => {
+    // Group variants by color so the picker reads as "pick a color, then a size".
+    // The hook must run on every render (even when style is null) to satisfy
+    // the rules of hooks, so the "closed" bailout comes after it.
+    const byColor = useMemo(() => {
+        const groups = {};
+        (style?.variants || []).forEach(v => {
+            (groups[v.color] = groups[v.color] || []).push(v);
+        });
+        return groups;
+    }, [style]);
+
+    if (!style) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="p-5 border-b border-gray-100 flex gap-3 items-center">
+                    {style.images?.[0]
+                        ? <img src={style.images[0]} alt={style.name} className="w-14 h-14 rounded-lg object-cover border border-gray-100" />
+                        : <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-2xl">👗</div>}
+                    <div className="min-w-0">
+                        <p className="font-bold text-gray-800 text-sm truncate">{style.name}</p>
+                        <p className="text-xs text-gray-400">{stylePriceLabel(style)}</p>
+                    </div>
+                    <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                </div>
+                <div className="p-5 space-y-4">
+                    {Object.entries(byColor).map(([color, variants]) => (
+                        <div key={color}>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{color}</p>
+                            <div className="flex flex-wrap gap-2">
+                                {variants.map(v => {
+                                    const disabled = v.active === false || v.stock <= 0;
+                                    return (
+                                        <button
+                                            key={v._id}
+                                            disabled={disabled}
+                                            onClick={() => onSelect(style, v)}
+                                            className={`px-3.5 py-2 rounded-xl text-sm font-semibold border-2 transition-all relative
+                                                ${disabled
+                                                    ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+                                                    : 'border-gray-200 text-gray-700 hover:border-green-500 hover:text-green-700'}`}
+                                        >
+                                            {v.size}
+                                            {!disabled && v.stock < 5 && (
+                                                <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{v.stock}</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                    {Object.keys(byColor).length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-6">No size/color variants set up for this style yet.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+});
+VariantPicker.displayName = 'VariantPicker';
 
 // ─── Cart Line ────────────────────────────────────────────────────────────────
 const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTotal }) => (
     <div className="flex gap-2.5 py-3 border-b border-gray-100 last:border-0">
-        {item.product.image
-            ? <img src={item.product.image} alt={item.product.name} className="w-11 h-11 rounded-lg object-cover flex-shrink-0 border border-gray-100" />
-            : <div className="w-11 h-11 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-300 text-lg">☕</div>
+        {item.image
+            ? <img src={item.image} alt={item.styleName} className="w-11 h-11 rounded-lg object-cover flex-shrink-0 border border-gray-100" />
+            : <div className="w-11 h-11 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-300 text-lg">👗</div>
         }
         <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
-                <p className="font-medium text-gray-800 text-sm leading-tight truncate pr-2">{item.product.name}</p>
+                <div className="min-w-0 pr-2">
+                    <p className="font-medium text-gray-800 text-sm leading-tight truncate">{item.styleName}</p>
+                    <p className="text-[10px] text-gray-400">{item.size} / {item.color}</p>
+                </div>
                 <button
-                    onClick={() => onRemove(item.product._id)}
+                    onClick={() => onRemove(item.variantId)}
                     className="w-5 h-5 rounded flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 transition-all flex-shrink-0"
                     aria-label="Remove item"
                 >
@@ -75,35 +156,32 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                     </svg>
                 </button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-0.5">KES {item.product.price.toFixed(2)} each</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">KES {item.unitPrice.toFixed(2)} each</p>
             <div className="flex items-center justify-between mt-1.5 gap-2">
-                {/* Qty controls — red minus, green plus */}
                 <div className="flex items-center gap-1">
                     <button
-                        onClick={() => onQtyChange(item.product._id, -1)}
+                        onClick={() => onQtyChange(item.variantId, -1)}
                         disabled={item.quantity <= 1}
                         className="w-6 h-6 rounded border border-red-200 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-300 text-sm font-bold flex items-center justify-center transition-all"
                     >−</button>
                     <span className="text-sm font-semibold w-6 text-center tabular-nums">{item.quantity}</span>
                     <button
-                        onClick={() => onQtyChange(item.product._id, 1)}
-                        disabled={item.quantity >= item.product.stock}
+                        onClick={() => onQtyChange(item.variantId, 1)}
+                        disabled={item.quantity >= item.stock}
                         className="w-6 h-6 rounded border border-green-300 text-green-600 hover:bg-green-600 hover:text-white hover:border-green-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-green-400 text-sm font-bold flex items-center justify-center transition-all"
                     >+</button>
                 </div>
-                {/* Discount */}
                 <div className="flex items-center gap-1">
                     <input
                         type="number"
                         min="0"
                         max="100"
                         value={item.discount}
-                        onChange={e => onDiscountChange(item.product._id, e.target.value)}
+                        onChange={e => onDiscountChange(item.variantId, e.target.value)}
                         className="w-10 border border-gray-200 rounded px-1 py-0.5 text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-green-300"
                     />
                     <span className="text-[11px] text-gray-400">%</span>
                 </div>
-                {/* Line total — green = positive value */}
                 <p className="text-sm font-bold text-green-700 tabular-nums">
                     KES {calcTotal(item).toFixed(2)}
                 </p>
@@ -128,7 +206,6 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                {/* Header */}
                 <div className="px-5 py-4 bg-green-600 text-white">
                     <p className="text-sm font-medium opacity-80">Amount Due</p>
                     <p className="text-3xl font-black tabular-nums mt-0.5">
@@ -137,7 +214,6 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                 </div>
 
                 <div className="p-5 space-y-4">
-                    {/* Order discount */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Order Discount (%)</label>
                         <input
@@ -156,25 +232,23 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                         )}
                     </div>
 
-                    {/* Payment method */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Payment Method</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {['Cash', 'M-Pesa'].map(m => (
+                        <div className="grid grid-cols-3 gap-2">
+                            {['Cash', 'M-Pesa', 'Card'].map(m => (
                                 <button
                                     key={m}
                                     onClick={() => onPaymentMethodChange(m)}
-                                    className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                    className={`py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
                                         ? 'border-green-600 bg-green-600 text-white shadow-sm'
                                         : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
                                 >
-                                    {m === 'Cash' ? '💵 Cash' : '📱 M-Pesa'}
+                                    {m === 'Cash' ? '💵 Cash' : m === 'M-Pesa' ? '📱 M-Pesa' : '💳 Card'}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Cash tendered */}
                     {paymentMethod === 'Cash' && (
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Cash Tendered</label>
@@ -194,7 +268,6 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                 placeholder="0.00"
                                 autoFocus
                             />
-                            {/* Quick amounts */}
                             {quickAmounts.length > 0 && (
                                 <div className="flex gap-1.5 mt-2">
                                     {quickAmounts.slice(0, 3).map(a => (
@@ -209,14 +282,12 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                     </button>
                                 </div>
                             )}
-                            {/* Change — green = customer gets money back */}
                             {tenderedNum > 0 && change >= 0 && (
                                 <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex justify-between items-center">
                                     <span className="text-sm font-semibold text-green-700">Change to give</span>
                                     <span className="text-xl font-black text-green-700 tabular-nums">KES {change.toFixed(2)}</span>
                                 </div>
                             )}
-                            {/* Short — red = insufficient */}
                             {tenderedNum > 0 && change < 0 && (
                                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex justify-between items-center">
                                     <span className="text-sm font-semibold text-red-600">Short by</span>
@@ -259,17 +330,16 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
 
     if (!sale) return null;
 
-    const subtotal = sale.items?.reduce((s, it) => s + it.product.price * it.quantity * (1 - it.discount / 100), 0) || 0;
+    const subtotal = sale.items?.reduce((s, it) => s + it.unitPrice * it.quantity * (1 - it.discount / 100), 0) || 0;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                {/* Receipt content */}
                 <div id="receipt-print" className="p-6">
                     <div className="text-center mb-5">
-                        <img src="/Login/logo.webp" alt="Logo" className="w-12 h-12 object-contain mx-auto mb-2" onError={e => e.target.style.display='none'} />
-                        <h1 className="font-bold text-base tracking-widest text-gray-800">TACEY BAKES n' BAKES</h1>
-                        <p className="text-[11px] text-gray-400">Nairobi, Kenya</p>
+                        <img src={businessSettings.logoPath} alt="Logo" className="w-12 h-12 object-contain mx-auto mb-2" onError={e => e.target.style.display='none'} />
+                        <h1 className="font-bold text-base tracking-widest text-gray-800">{businessSettings.name.toUpperCase()}</h1>
+                        <p className="text-[11px] text-gray-400">{businessSettings.address}</p>
                     </div>
 
                     <div className="border-t border-dashed border-gray-200 pt-3 mb-3 font-mono text-[11px] text-gray-500 space-y-0.5">
@@ -287,7 +357,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                         </div>
                         <div className="flex justify-between">
                             <span>Payment</span>
-                            <span className="font-semibold">{sale.paymentMethod}</span>
+                            <span className="font-semibold capitalize">{sale.paymentMethod}</span>
                         </div>
                     </div>
 
@@ -295,11 +365,11 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                         {sale.items?.map((item, i) => (
                             <div key={i}>
                                 <div className="flex justify-between">
-                                    <span className="flex-1 truncate pr-2">{item.product?.name}</span>
-                                    <span className="font-semibold">KES {(item.product.price * item.quantity * (1 - item.discount / 100)).toFixed(2)}</span>
+                                    <span className="flex-1 truncate pr-2">{item.styleName} <span className="text-gray-400">({item.size}/{item.color})</span></span>
+                                    <span className="font-semibold">KES {(item.unitPrice * item.quantity * (1 - item.discount / 100)).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-400 text-[10px]">
-                                    <span>{item.quantity} × KES {item.product.price.toFixed(2)}{item.discount > 0 ? ` (−${item.discount}%)` : ''}</span>
+                                    <span>{item.quantity} × KES {item.unitPrice.toFixed(2)}{item.discount > 0 ? ` (−${item.discount}%)` : ''}</span>
                                 </div>
                             </div>
                         ))}
@@ -324,7 +394,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                             <img src={qrUrl} alt="QR" className="w-16 h-16" />
                         </div>
                     )}
-                    <p className="text-center text-[10px] text-gray-400 mt-3">Thank you for shopping with us!</p>
+                    <p className="text-center text-[10px] text-gray-400 mt-3">{businessSettings.receiptFooter}</p>
                 </div>
 
                 <div className="flex gap-3 px-5 pb-5">
@@ -342,8 +412,8 @@ export default function POSPage() {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
 
-    // All products from server — never filtered
-    const [allProducts, setAllProducts] = useState([]);
+    // All styles (with embedded variants) from server — never filtered
+    const [allStyles, setAllStyles] = useState([]);
     const [cart, setCart] = useState([]);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
@@ -357,49 +427,51 @@ export default function POSPage() {
     const [cartDiscount, setCartDiscount] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [mobileCartOpen, setMobileCartOpen] = useState(false);
+    const [pickerStyle, setPickerStyle] = useState(null); // style currently open in the size/color picker
 
     const searchRef = useRef(null);
 
-    // ── Load all products (called on mount + after each sale) ──
-    const loadProducts = useCallback(async () => {
+    // ── Load all styles (called on mount + after each sale) ──
+    const loadStyles = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get('/products');
-            setAllProducts(res.data);
+            const res = await api.get('/styles');
+            setAllStyles(res.data);
         } catch {
-            toast.error('Failed to load products');
+            toast.error('Failed to load styles');
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => { loadProducts(); }, [loadProducts]);
+    useEffect(() => { loadStyles(); }, [loadStyles]);
 
     // ── Derived: categories with counts ──
     const categories = useMemo(
-        () => [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort(),
-        [allProducts]
+        () => [...new Set(allStyles.map(s => s.category).filter(Boolean))].sort(),
+        [allStyles]
     );
 
     const categoryCounts = useMemo(() => {
         const counts = {};
-        allProducts.forEach(p => { if (p.category) counts[p.category] = (counts[p.category] || 0) + 1; });
+        allStyles.forEach(s => { if (s.category) counts[s.category] = (counts[s.category] || 0) + 1; });
         return counts;
-    }, [allProducts]);
+    }, [allStyles]);
 
-    // ── Derived: filtered + sorted product list ──
-    const products = useMemo(() => {
-        let list = allProducts;
+    // ── Derived: filtered + sorted style list ──
+    const styles = useMemo(() => {
+        let list = allStyles;
 
         if (category !== 'all') {
-            list = list.filter(p => (p.category || '').toLowerCase() === category.toLowerCase());
+            list = list.filter(s => (s.category || '').toLowerCase() === category.toLowerCase());
         }
 
         if (search.trim()) {
             const q = search.toLowerCase();
-            list = list.filter(p =>
-                p.name.toLowerCase().includes(q) ||
-                (p.barcode || '').toLowerCase().includes(q)
+            list = list.filter(s =>
+                s.name.toLowerCase().includes(q) ||
+                (s.styleCode || '').toLowerCase().includes(q) ||
+                (s.brand || '').toLowerCase().includes(q)
             );
         }
 
@@ -407,24 +479,51 @@ export default function POSPage() {
             switch (sortBy) {
                 case 'name_asc':   return a.name.localeCompare(b.name);
                 case 'name_desc':  return b.name.localeCompare(a.name);
-                case 'price_asc':  return a.price - b.price;
-                case 'price_desc': return b.price - a.price;
-                case 'stock_asc':  return a.stock - b.stock;
+                case 'price_asc':  return a.basePrice - b.basePrice;
+                case 'price_desc': return b.basePrice - a.basePrice;
+                case 'stock_asc':  return styleStock(a) - styleStock(b);
                 default:           return 0;
             }
         });
-    }, [allProducts, category, search, sortBy]);
+    }, [allStyles, category, search, sortBy]);
+
+    // ── Add a specific variant to the cart ──
+    const addVariantToCart = useCallback((style, variant) => {
+        if (variant.stock < 1) { toast.error(`${style.name} (${variant.size}/${variant.color}) is out of stock`); return; }
+        setCart(prev => {
+            const ex = prev.find(i => i.variantId === variant._id);
+            if (ex) {
+                if (ex.quantity >= variant.stock) {
+                    toast.warning(`Only ${variant.stock} unit${variant.stock !== 1 ? 's' : ''} in stock`);
+                    return prev;
+                }
+                return prev.map(i => i.variantId === variant._id ? { ...i, quantity: i.quantity + 1 } : i);
+            }
+            toast.success(`${style.name} (${variant.size}/${variant.color}) added`, { autoClose: 1000, hideProgressBar: true });
+            return [...prev, {
+                variantId: variant._id,
+                styleId: style._id,
+                styleName: style.name,
+                size: variant.size,
+                color: variant.color,
+                image: style.images?.[0] || '',
+                unitPrice: variantPrice(style, variant),
+                stock: variant.stock,
+                quantity: 1,
+                discount: 0,
+            }];
+        });
+        setPickerStyle(null);
+    }, []);
 
     // ── Keyboard shortcuts ──
     useEffect(() => {
         const allCats = ['all', ...categories];
         const down = e => {
-            // Ignore when typing in an input
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
             if (e.ctrlKey && e.key === 'b') { e.preventDefault(); setShowScanner(v => !v); }
             if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); if (cart.length > 0) setShowPayment(true); }
             if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
-            // 1–9 jumps to category by index
             if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey) {
                 const idx = parseInt(e.key) - 1;
                 if (idx < allCats.length) setCategory(allCats[idx]);
@@ -435,104 +534,92 @@ export default function POSPage() {
     }, [cart, categories]);
 
     // ── Cart computations ──
-    const calcTotal = useCallback(item => item.product.price * item.quantity * (1 - item.discount / 100), []);
+    const calcTotal = useCallback(item => item.unitPrice * item.quantity * (1 - item.discount / 100), []);
     const subtotal  = useMemo(() => cart.reduce((s, it) => s + calcTotal(it), 0), [cart, calcTotal]);
     const grandTotal = useMemo(() => subtotal * (1 - cartDiscount / 100), [subtotal, cartDiscount]);
     const cartCount  = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
-    // ── Add to cart ──
-    const addToCart = useCallback(product => {
-        if (product.stock < 1) { toast.error(`${product.name} is out of stock`); return; }
-        setCart(prev => {
-            const ex = prev.find(i => i.product._id === product._id);
-            if (ex) {
-                if (ex.quantity >= product.stock) {
-                    toast.warning(`Only ${product.stock} unit${product.stock !== 1 ? 's' : ''} in stock`);
-                    return prev;
-                }
-                return prev.map(i => i.product._id === product._id ? { ...i, quantity: i.quantity + 1 } : i);
-            }
-            toast.success(`${product.name} added`, { autoClose: 1000, hideProgressBar: true });
-            return [...prev, { product, quantity: 1, discount: 0 }];
-        });
-    }, []);
-
     // ── Quantity change ──
-    const changeQty = useCallback((id, delta) => {
+    const changeQty = useCallback((variantId, delta) => {
         setCart(prev => prev.map(item => {
-            if (item.product._id !== id) return item;
+            if (item.variantId !== variantId) return item;
             const newQ = item.quantity + delta;
             if (newQ < 1) return item;
-            if (newQ > item.product.stock) { toast.warning(`Only ${item.product.stock} in stock`); return item; }
+            if (newQ > item.stock) { toast.warning(`Only ${item.stock} in stock`); return item; }
             return { ...item, quantity: newQ };
         }));
     }, []);
 
-    const removeFromCart = useCallback(id => setCart(prev => prev.filter(i => i.product._id !== id)), []);
+    const removeFromCart = useCallback(variantId => setCart(prev => prev.filter(i => i.variantId !== variantId)), []);
 
-    const changeDiscount = useCallback((id, val) => {
+    const changeDiscount = useCallback((variantId, val) => {
         const d = Math.min(100, Math.max(0, parseFloat(val) || 0));
-        setCart(prev => prev.map(i => i.product._id === id ? { ...i, discount: d } : i));
+        setCart(prev => prev.map(i => i.variantId === variantId ? { ...i, discount: d } : i));
     }, []);
 
-    // ── Barcode scan — searches allProducts (full catalog), no server fallback needed ──
+    // ── Resolve a barcode straight to its variant (garment-level tagging means
+    // a scan should skip the size/color picker entirely) ──
+    const resolveBarcode = useCallback(async (barcode) => {
+        // First check what's already loaded, to avoid a round trip on the common case
+        for (const style of allStyles) {
+            const variant = (style.variants || []).find(v => v.barcode === barcode);
+            if (variant) return { style, variant };
+        }
+        try {
+            const res = await api.get(`/variants/lookup?barcode=${encodeURIComponent(barcode)}`);
+            const variant = res.data;
+            const style = variant.style; // populated by the lookup endpoint
+            return { style, variant };
+        } catch {
+            return null;
+        }
+    }, [allStyles]);
+
+    // ── Barcode scan ──
     const handleScan = useCallback(async (err, result) => {
         if (!result?.text) return;
         setShowScanner(false);
         const barcode = result.text.trim();
-        const match = allProducts.find(p => p.barcode === barcode);
+        const match = await resolveBarcode(barcode);
         if (match) {
-            addToCart(match);
+            addVariantToCart(match.style, match.variant);
         } else {
-            // Product might have been added after last load — re-fetch then retry
-            try {
-                const res = await api.get(`/products?search=${encodeURIComponent(barcode)}`);
-                const found = res.data.find(p => p.barcode === barcode);
-                if (found) {
-                    setAllProducts(prev => prev.some(p => p._id === found._id) ? prev : [found, ...prev]);
-                    addToCart(found);
-                } else {
-                    toast.error(`No product found for barcode: ${barcode}`);
-                }
-            } catch {
-                toast.error('Barcode lookup failed');
-            }
+            toast.error(`No item found for barcode: ${barcode}`);
         }
-    }, [allProducts, addToCart]);
+    }, [resolveBarcode, addVariantToCart]);
 
     // ── Manual barcode: type in search box + Enter ──
-    const handleSearchKeyDown = useCallback(e => {
+    const handleSearchKeyDown = useCallback(async e => {
         if (e.key !== 'Enter' || !search.trim()) return;
-        const exact = allProducts.find(p => p.barcode === search.trim());
-        if (exact) { addToCart(exact); setSearch(''); }
-    }, [search, allProducts, addToCart]);
+        const match = await resolveBarcode(search.trim());
+        if (match) { addVariantToCart(match.style, match.variant); setSearch(''); }
+    }, [search, resolveBarcode, addVariantToCart]);
 
     // ── Confirm payment ──
     const handleConfirmPayment = useCallback(async () => {
         setProcessing(true);
         try {
             const payload = {
-                items: cart.map(({ product, quantity, discount }) => ({ product: product._id, quantity, discount })),
+                items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
                 totalAmount: grandTotal,
                 cartDiscount,
                 paymentMethod,
             };
             const res = await api.post('/sales', payload);
-            const detailItems = cart.map(({ product, quantity, discount }) => ({ product, quantity, discount }));
-            setSaleDetails({ ...res.data, items: detailItems, paymentMethod, cartDiscount });
+            setSaleDetails(res.data);
             toast.success('Sale completed!');
             setCart([]);
             setCartDiscount(0);
             setShowPayment(false);
             setMobileCartOpen(false);
             setShowReceipt(true);
-            loadProducts(); // refresh stock counts
+            loadStyles(); // refresh stock counts
         } catch (err) {
             toast.error(err.response?.data?.error || 'Failed to complete sale');
         } finally {
             setProcessing(false);
         }
-    }, [cart, grandTotal, cartDiscount, paymentMethod, loadProducts]);
+    }, [cart, grandTotal, cartDiscount, paymentMethod, loadStyles]);
 
     // ── Print receipt ──
     const handlePrint = useCallback(() => {
@@ -561,11 +648,11 @@ export default function POSPage() {
             {/* ══ Header ══════════════════════════════════════════════════════ */}
             <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 flex-shrink-0 z-30 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <img src="/Login/logo.webp" alt="Logo" className="w-8 h-8 object-contain rounded"
+                    <img src={businessSettings.logoPath} alt="Logo" className="w-8 h-8 object-contain rounded"
                         onError={e => { e.target.style.display = 'none'; }} />
                     <div className="leading-tight">
-                        <p className="font-black text-gray-800 text-sm">TACEY BAKES</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">Point of Sale</p>
+                        <p className="font-black text-gray-800 text-sm">{businessSettings.name}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">{businessSettings.tagline}</p>
                     </div>
                 </div>
 
@@ -577,7 +664,6 @@ export default function POSPage() {
                         <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono">Ctrl+↵</kbd><span>pay</span>
                     </div>
 
-                    {/* Mobile cart toggle */}
                     <button
                         onClick={() => setMobileCartOpen(v => !v)}
                         className="relative lg:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -615,10 +701,9 @@ export default function POSPage() {
             {/* ══ Body ════════════════════════════════════════════════════════ */}
             <div className="flex-1 flex overflow-hidden">
 
-                {/* ── Left: Products ─────────────────────────────────────────── */}
+                {/* ── Left: Styles ───────────────────────────────────────────── */}
                 <main className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-                    {/* Toolbar: search + sort + scan + refresh */}
                     <div className="bg-white border-b border-gray-100 px-4 py-2.5 flex gap-2 flex-shrink-0">
                         <div className="relative flex-1">
                             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -627,7 +712,7 @@ export default function POSPage() {
                             <input
                                 ref={searchRef}
                                 type="text"
-                                placeholder="Search or type barcode + Enter… (F2)"
+                                placeholder="Search styles or type barcode + Enter… (F2)"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
@@ -638,7 +723,6 @@ export default function POSPage() {
                             )}
                         </div>
 
-                        {/* Sort */}
                         <select
                             value={sortBy}
                             onChange={e => setSortBy(e.target.value)}
@@ -651,7 +735,6 @@ export default function POSPage() {
                             <option value="stock_asc">Stock ↑</option>
                         </select>
 
-                        {/* Scan */}
                         <button
                             onClick={() => setShowScanner(v => !v)}
                             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${showScanner
@@ -664,9 +747,8 @@ export default function POSPage() {
                             <span className="hidden sm:inline">{showScanner ? 'Close' : 'Scan'}</span>
                         </button>
 
-                        {/* Refresh */}
                         <button
-                            onClick={loadProducts}
+                            onClick={loadStyles}
                             disabled={loading}
                             title="Refresh stock"
                             className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 bg-white transition-colors disabled:opacity-40"
@@ -677,10 +759,9 @@ export default function POSPage() {
                         </button>
                     </div>
 
-                    {/* Category chips */}
                     <div className="bg-white border-b border-gray-100 px-4 py-2 flex gap-1.5 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
                         {allCats.map((c, idx) => {
-                            const count = c === 'all' ? allProducts.length : (categoryCounts[c] || 0);
+                            const count = c === 'all' ? allStyles.length : (categoryCounts[c] || 0);
                             const active = category === c;
                             return (
                                 <button
@@ -700,7 +781,6 @@ export default function POSPage() {
                         })}
                     </div>
 
-                    {/* Barcode scanner */}
                     {showScanner && (
                         <div className="flex-shrink-0 bg-gray-900 flex justify-center items-center py-4 gap-4">
                             <div className="rounded-xl overflow-hidden border-2 border-indigo-400 shadow-xl">
@@ -708,8 +788,8 @@ export default function POSPage() {
                             </div>
                             <div className="text-white text-xs space-y-1 hidden md:block">
                                 <p className="font-semibold text-indigo-300">📷 Camera Scanner</p>
-                                <p className="text-gray-400">Point camera at a barcode</p>
-                                <p className="text-gray-500 text-[10px]">Or type barcode in search + Enter</p>
+                                <p className="text-gray-400">Point camera at a garment's barcode</p>
+                                <p className="text-gray-500 text-[10px]">Or type it in search + Enter</p>
                                 <button onClick={() => setShowScanner(false)} className="mt-2 text-gray-400 hover:text-white text-xs border border-gray-600 rounded px-2 py-1 transition-colors">
                                     Close ✕
                                 </button>
@@ -717,9 +797,8 @@ export default function POSPage() {
                         </div>
                     )}
 
-                    {/* Products grid */}
                     <div className="flex-1 overflow-y-auto p-4">
-                        {loading && allProducts.length === 0 ? (
+                        {loading && allStyles.length === 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
                                 {[...Array(12)].map((_, i) => (
                                     <div key={i} className="rounded-xl bg-white border border-gray-100 overflow-hidden animate-pulse">
@@ -731,10 +810,10 @@ export default function POSPage() {
                                     </div>
                                 ))}
                             </div>
-                        ) : products.length === 0 ? (
+                        ) : styles.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400 py-20">
                                 <div className="text-5xl mb-4">🔍</div>
-                                <p className="font-semibold text-gray-500">No products found</p>
+                                <p className="font-semibold text-gray-500">No styles found</p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {category !== 'all' ? `No items in "${category}"` : 'Try a different search'}
                                 </p>
@@ -749,17 +828,16 @@ export default function POSPage() {
                             </div>
                         ) : (
                             <>
-                                {/* Result count when filtered */}
                                 {(search || category !== 'all') && (
                                     <p className="text-xs text-gray-400 mb-3">
-                                        {products.length} product{products.length !== 1 ? 's' : ''}
+                                        {styles.length} style{styles.length !== 1 ? 's' : ''}
                                         {category !== 'all' ? ` in ${category}` : ''}
                                         {search ? ` matching "${search}"` : ''}
                                     </p>
                                 )}
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                                    {products.map(p => (
-                                        <ProductCard key={p._id} product={p} onAdd={addToCart} />
+                                    {styles.map(s => (
+                                        <StyleCard key={s._id} style={s} onOpen={setPickerStyle} />
                                     ))}
                                 </div>
                             </>
@@ -805,12 +883,12 @@ export default function POSPage() {
                                     </svg>
                                 </div>
                                 <p className="font-semibold text-gray-400 text-sm">Cart is empty</p>
-                                <p className="text-xs text-gray-300 mt-1">Tap a product to add it here</p>
+                                <p className="text-xs text-gray-300 mt-1">Tap a style to pick a size/color</p>
                             </div>
                         ) : (
                             cart.map(item => (
                                 <CartLine
-                                    key={item.product._id}
+                                    key={item.variantId}
                                     item={item}
                                     onQtyChange={changeQty}
                                     onRemove={removeFromCart}
@@ -854,6 +932,12 @@ export default function POSPage() {
             </div>
 
             {/* ══ Modals ══════════════════════════════════════════════════════ */}
+            <VariantPicker
+                style={pickerStyle}
+                onClose={() => setPickerStyle(null)}
+                onSelect={addVariantToCart}
+            />
+
             <PaymentModal
                 isOpen={showPayment}
                 onClose={() => setShowPayment(false)}

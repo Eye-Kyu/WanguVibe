@@ -1,19 +1,19 @@
 const InventoryLog = require('../models/InventoryLog');
-const Product = require('../models/Product');
+const Variant = require('../models/Variant');
 
-exports.restockProduct = async (req, res) => {
+exports.restockVariant = async (req, res) => {
     try {
-        const { productId, quantity } = req.body;
+        const { variantId, quantity } = req.body;
         const userId = req.user.id;
 
-        const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ error: 'Product not found' });
+        const variant = await Variant.findById(variantId);
+        if (!variant) return res.status(404).json({ error: 'Variant not found' });
 
-        product.stock += quantity;
-        await product.save();
+        variant.stock += quantity;
+        await variant.save();
 
         const log = new InventoryLog({
-            product: productId,
+            variant: variantId,
             quantity,
             action: 'restock',
             user: userId
@@ -21,17 +21,22 @@ exports.restockProduct = async (req, res) => {
 
         await log.save();
 
-        res.status(200).json({ message: 'Product restocked', product, log });
+        res.status(200).json({ message: 'Variant restocked', variant, log });
     } catch (err) {
+        console.error('Error restocking variant:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
 exports.getInventoryLogs = async (req, res) => {
     try {
-        const logs = await InventoryLog.find().populate('product', 'name').populate('user', 'name email');
+        const logs = await InventoryLog.find()
+            .sort({ date: -1 })
+            .populate({ path: 'variant', select: 'size color sku', populate: { path: 'style', select: 'name' } })
+            .populate('user', 'name email');
         res.status(200).json(logs);
     } catch (err) {
+        console.error('Error fetching inventory logs:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };

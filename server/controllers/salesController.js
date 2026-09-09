@@ -1,9 +1,10 @@
-const Product = require('../models/Product');
+const Variant = require('../models/Variant');
+const Style = require('../models/Style');
 const Sale = require('../models/Sale');
 
 // POST create new sale
 exports.createSale = async (req, res) => {
-  const { items, totalAmount, cartDiscount, paymentMethod } = req.body;
+  const { items, totalAmount, cartDiscount, paymentMethod, customer } = req.body;
   try {
     // Validate inputs
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -13,12 +14,12 @@ exports.createSale = async (req, res) => {
       return res.status(400).json({ error: 'Invalid total amount' });
     }
 
-    // Normalize payment method: accept 'Cash', 'M-Pesa', 'cash', 'mpesa', etc.
+    // Normalize payment method: accept 'Cash', 'M-Pesa', 'Card', 'cash', 'mpesa', 'card', etc.
     const methodNorm = (paymentMethod || '').toLowerCase().replace(/[^a-z]/g, '');
-    if (!['cash', 'mpesa'].includes(methodNorm)) {
+    if (!['cash', 'mpesa', 'card'].includes(methodNorm)) {
       return res.status(400).json({ error: `Invalid payment method: "${paymentMethod}"` });
     }
-    const normalizedPaymentMethod = methodNorm === 'mpesa' ? 'mpesa' : 'cash';
+    const normalizedPaymentMethod = methodNorm;
 
     if ((cartDiscount ?? 0) < 0 || (cartDiscount ?? 0) > 100) {
       return res.status(400).json({ error: 'Cart discount must be between 0 and 100%' });
@@ -27,21 +28,39 @@ exports.createSale = async (req, res) => {
       return res.status(401).json({ error: 'User authentication required' });
     }
 
-    // Validate stock and discounts
+    // Validate stock/discounts and build denormalized line items
     let calculatedTotal = 0;
+    const builtItems = [];
     for (const item of items) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        return res.status(404).json({ error: `Product ${item.product} not found` });
+      const variant = await Variant.findById(item.variant).populate('style', 'name basePrice');
+      if (!variant) {
+        return res.status(404).json({ error: `Variant ${item.variant} not found` });
       }
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ error: `Insufficient stock for ${product.name}. Only ${product.stock} available.` });
+      if (!variant.style) {
+        return res.status(404).json({ error: `Style for variant ${item.variant} not found` });
+      }
+      if (variant.stock < item.quantity) {
+        return res.status(400).json({
+          error: `Insufficient stock for ${variant.style.name} (${variant.size}/${variant.color}). Only ${variant.stock} available.`
+        });
       }
       if (item.discount < 0 || item.discount > 100) {
-        return res.status(400).json({ error: `Discount for ${product.name} must be between 0 and 100%` });
+        return res.status(400).json({ error: `Discount for ${variant.style.name} must be between 0 and 100%` });
       }
-      const itemTotal = product.price * item.quantity * (1 - item.discount / 100);
+
+      const unitPrice = variant.priceOverride ?? variant.style.basePrice;
+      const itemTotal = unitPrice * item.quantity * (1 - item.discount / 100);
       calculatedTotal += itemTotal;
+
+      builtItems.push({
+        variant: variant._id,
+        styleName: variant.style.name,
+        size: variant.size,
+        color: variant.color,
+        unitPrice,
+        quantity: item.quantity,
+        discount: item.discount || 0,
+      });
     }
 
     calculatedTotal = calculatedTotal * (1 - (cartDiscount ?? 0) / 100);
@@ -50,7 +69,8 @@ exports.createSale = async (req, res) => {
     }
 
     const sale = new Sale({
-      items,
+      items: builtItems,
+      customer: customer || null,
       totalAmount,
       cartDiscount: cartDiscount ?? 0,
       paymentMethod: normalizedPaymentMethod,
@@ -58,15 +78,16 @@ exports.createSale = async (req, res) => {
     });
 
     await Promise.all(
-      items.map(item =>
-        Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } })
+      builtItems.map(item =>
+        Variant.findByIdAndUpdate(item.variant, { $inc: { stock: -item.quantity } })
       )
     );
 
     await sale.save();
     const populatedSale = await Sale.findById(sale._id)
-      .populate('items.product', 'name price')
-      .populate('cashier', 'name');
+      .populate({ path: 'items.variant', select: 'sku barcode size color', populate: { path: 'style', select: 'name images' } })
+      .populate('cashier', 'name')
+      .populate('customer', 'name phone');
 
     if (!populatedSale.cashier) {
       return res.status(400).json({ error: 'Cashier information not found' });
@@ -83,10 +104,11 @@ exports.createSale = async (req, res) => {
 exports.getAllSales = async (req, res) => {
   try {
     const { limit } = req.query;
-    const query = limit ? Sale.find().limit(parseInt(limit)) : Sale.find();
+    const query = limit ? Sale.find().sort({ createdAt: -1 }).limit(parseInt(limit)) : Sale.find().sort({ createdAt: -1 });
     const sales = await query
-      .populate('items.product', 'name price')
-      .populate('cashier', 'name');
+      .populate({ path: 'items.variant', select: 'sku barcode size color', populate: { path: 'style', select: 'name images' } })
+      .populate('cashier', 'name')
+      .populate('customer', 'name phone');
     res.json(sales);
   } catch (err) {
     console.error('Error fetching sales:', err);
@@ -98,8 +120,9 @@ exports.getAllSales = async (req, res) => {
 exports.getSaleById = async (req, res) => {
   try {
     const sale = await Sale.findById(req.params.id)
-      .populate('items.product', 'name price')
-      .populate('cashier', 'name');
+      .populate({ path: 'items.variant', select: 'sku barcode size color', populate: { path: 'style', select: 'name images' } })
+      .populate('cashier', 'name')
+      .populate('customer', 'name phone');
     if (!sale) return res.status(404).json({ error: 'Sale not found' });
     res.json(sale);
   } catch (err) {
@@ -117,8 +140,9 @@ exports.getSalesReport = async (req, res) => {
       query.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
     const sales = await Sale.find(query)
-      .populate('items.product', 'name price')
-      .populate('cashier', 'name');
+      .populate({ path: 'items.variant', select: 'sku barcode size color', populate: { path: 'style', select: 'name images' } })
+      .populate('cashier', 'name')
+      .populate('customer', 'name phone');
     res.json(sales);
   } catch (err) {
     console.error('Error fetching sales report:', err);

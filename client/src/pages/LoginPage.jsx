@@ -2,6 +2,7 @@ import { useState, useContext } from "react";
 import api from "../api/axiosInstance";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
+import businessSettings from "../config/businessSettings";
 
 const LoginPage = () => {
     const { setToken, setUser } = useContext(AuthContext);
@@ -49,8 +50,8 @@ const LoginPage = () => {
                     {/* Logo */}
                     <div className="flex justify-center mb-5">
                         <img
-                            src="/Login/logo.webp"
-                            alt="Tacey Bakes Logo"
+                            src={businessSettings.logoPath}
+                            alt={`${businessSettings.name} logo`}
                             className="w-20 sm:w-24 md:w-28 h-auto"
                         />
                     </div>
@@ -60,7 +61,7 @@ const LoginPage = () => {
                         <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-widest
                             bg-gradient-to-r from-purple-300 via-purple-500 to-purple-600
                             bg-clip-text text-transparent">
-                            TACEY BAKES n' BAKES
+                            {businessSettings.name}
                         </h1>
                         <p className="text-gray-200 text-xs sm:text-sm mt-2">
                             Welcome back

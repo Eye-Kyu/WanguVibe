@@ -21,16 +21,25 @@ const SORT_OPTIONS = [
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+const PAYMENT_LABELS = { mpesa: "M-Pesa", cash: "Cash", card: "Card" };
+const PAYMENT_STYLES = {
+    mpesa: "bg-green-100 text-green-700",
+    cash:  "bg-blue-100 text-blue-700",
+    card:  "bg-purple-100 text-purple-700",
+};
+
 function PaymentBadge({ method }) {
-    const isMpesa = method === "mpesa";
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-            isMpesa ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-        }`}>
-            {isMpesa ? "M-Pesa" : "Cash"}
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${PAYMENT_STYLES[method] || "bg-gray-100 text-gray-700"}`}>
+            {PAYMENT_LABELS[method] || method}
         </span>
     );
 }
+
+// A sale line item's display name — "Style Name (Size/Color)" — built from
+// fields denormalized onto the sale at checkout time (see Sale model), so it
+// stays correct even if the style/variant is edited or deleted afterward.
+const lineItemName = (item) => `${item.styleName || "Unknown item"} (${item.size}/${item.color})`;
 
 function StatCard({ label, value, sub }) {
     return (
@@ -104,7 +113,7 @@ function SaleModal({ sale, onClose }) {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
-                                <th className="pb-2 text-left">Product</th>
+                                <th className="pb-2 text-left">Item</th>
                                 <th className="pb-2 text-right">Qty</th>
                                 <th className="pb-2 text-right">Unit Price</th>
                                 {hasDiscounts && (
@@ -115,8 +124,8 @@ function SaleModal({ sale, onClose }) {
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {sale.items.map((item, idx) => {
-                                const name  = item.product?.name  || "Unknown product";
-                                const price = item.product?.price ?? 0;
+                                const name  = lineItemName(item);
+                                const price = item.unitPrice ?? 0;
                                 const disc  = item.discount ?? 0;
                                 const subtotal = price * item.quantity * (1 - disc / 100);
 
@@ -185,8 +194,8 @@ const SalesPage = () => {
     const [sortBy, setSortBy]               = useState("date_desc");
 
     // ── Data fetch ────────────────────────────────────────────────────────
-    // /sales already populates items.product (name, price) and cashier (name)
-    // — no separate /products call needed
+    // /sales already carries denormalized items.styleName/size/color/unitPrice
+    // plus populated cashier (name) — no separate /styles call needed
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
@@ -223,10 +232,10 @@ const SalesPage = () => {
             if (q) {
                 const matchesId      = sale._id.slice(-6).toLowerCase().includes(q);
                 const matchesCashier = sale.cashier?.name?.toLowerCase().includes(q);
-                const matchesProduct = sale.items.some(
-                    (item) => item.product?.name?.toLowerCase().includes(q)
+                const matchesItem = sale.items.some(
+                    (item) => item.styleName?.toLowerCase().includes(q)
                 );
-                if (!matchesId && !matchesCashier && !matchesProduct) return false;
+                if (!matchesId && !matchesCashier && !matchesItem) return false;
             }
 
             return true;
@@ -262,7 +271,7 @@ const SalesPage = () => {
         setSearch(""); setPaymentFilter(""); setStartDate(""); setEndDate("");
     };
 
-    // ── Export — one row per line item so product names are included ───────
+    // ── Export — one row per line item so item names are included ──────────
     const handleExport = () => {
         if (!filteredSales.length) {
             toast.info("Nothing to export.");
@@ -273,12 +282,14 @@ const SalesPage = () => {
             sale.items.map((item) => ({
                 "Sale ID":       sale._id,
                 "Date":          new Date(sale.createdAt).toLocaleString(),
-                "Product":       item.product?.name || "Unknown",
+                "Item":          item.styleName || "Unknown",
+                "Size":          item.size,
+                "Color":         item.color,
                 "Qty":           item.quantity,
-                "Unit Price":    item.product?.price ?? 0,
+                "Unit Price":    item.unitPrice ?? 0,
                 "Item Discount": item.discount > 0 ? `${item.discount}%` : "—",
                 "Cart Discount": sale.cartDiscount > 0 ? `${sale.cartDiscount}%` : "—",
-                "Payment":       sale.paymentMethod === "mpesa" ? "M-Pesa" : "Cash",
+                "Payment":       PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod,
                 "Sale Total":    sale.totalAmount,
                 "Cashier":       sale.cashier?.name || "—",
             }))
@@ -351,7 +362,7 @@ const SalesPage = () => {
                         </label>
                         <input
                             type="text"
-                            placeholder="Product name, sale ID, cashier…"
+                            placeholder="Item name, sale ID, cashier…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -370,6 +381,7 @@ const SalesPage = () => {
                             <option value="">All Methods</option>
                             <option value="cash">Cash</option>
                             <option value="mpesa">M-Pesa</option>
+                            <option value="card">Card</option>
                         </select>
                     </div>
 
@@ -451,9 +463,9 @@ const SalesPage = () => {
                                 </tr>
                             ) : (
                                 currentSales.map((sale) => {
-                                    // Build item name preview directly from populated data
+                                    // Build item name preview directly from denormalized data
                                     const names = sale.items
-                                        .map((i) => i.product?.name)
+                                        .map((i) => i.styleName)
                                         .filter(Boolean);
                                     const preview = names.slice(0, 2).join(", ");
                                     const overflow = names.length > 2

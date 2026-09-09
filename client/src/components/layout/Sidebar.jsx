@@ -11,7 +11,7 @@ const Sidebar = () => {
             <nav className="space-y-2">
                 <NavLink to="/admin" end className={linkClasses}>Dashboard</NavLink>
                 <NavLink to="/admin/sales" className={linkClasses}>Sales</NavLink>
-                <NavLink to="/admin/products" className={linkClasses}>Products</NavLink>
+                <NavLink to="/admin/styles" className={linkClasses}>Styles</NavLink>
                 <NavLink to="/admin/users" className={linkClasses}>Users</NavLink>
             </nav>
         </aside>

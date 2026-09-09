@@ -1,0 +1,73 @@
+const Customer = require('../models/Customer');
+
+exports.getAllCustomers = async (req, res) => {
+  try {
+    const { search } = req.query;
+    const query = search
+      ? { $or: [{ name: { $regex: search, $options: 'i' } }, { phone: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }] }
+      : {};
+    const customers = await Customer.find(query).sort({ name: 1 });
+    res.json(customers);
+  } catch (err) {
+    console.error('Error fetching customers:', err);
+    res.status(500).json({ error: 'Server error fetching customers' });
+  }
+};
+
+exports.getCustomerById = async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    res.json(customer);
+  } catch (err) {
+    console.error('Error fetching customer:', err);
+    res.status(500).json({ error: 'Server error fetching customer' });
+  }
+};
+
+exports.createCustomer = async (req, res) => {
+  try {
+    const { name, phone, email, notes } = req.body;
+    const customer = new Customer({
+      name,
+      phone: phone?.trim() || undefined,
+      email: email?.trim() || undefined,
+      notes,
+    });
+    await customer.save();
+    res.status(201).json(customer);
+  } catch (err) {
+    console.error('Error creating customer:', err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'A customer with this phone or email already exists' });
+    }
+    res.status(400).json({ error: 'Invalid customer data' });
+  }
+};
+
+exports.updateCustomer = async (req, res) => {
+  try {
+    const { name, phone, email, notes } = req.body;
+    const updated = await Customer.findByIdAndUpdate(
+      req.params.id,
+      { $set: { name, phone, email, notes } },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: 'Customer not found' });
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating customer:', err);
+    res.status(400).json({ error: 'Invalid update data' });
+  }
+};
+
+exports.deleteCustomer = async (req, res) => {
+  try {
+    const deleted = await Customer.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Customer not found' });
+    res.json({ message: 'Customer deleted' });
+  } catch (err) {
+    console.error('Error deleting customer:', err);
+    res.status(400).json({ error: 'Error deleting customer' });
+  }
+};
