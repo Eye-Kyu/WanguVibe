@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef, memo, useContext } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axiosInstance';
 import BarcodeScannerComponent from 'react-qr-barcode-scanner';
 import QRCode from 'qrcode';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import businessSettings from '../config/businessSettings';
+import { setPosLocale } from '../i18n';
+import { IconPhoto, IconGift, IconX, IconCheck, IconCash, IconPhone, IconCard, IconTag, IconPrinter, IconCart, IconCamera, IconSearch } from '../components/icons';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 // Total stock across a style's variants, and its displayed price (a single
@@ -30,15 +33,15 @@ const StyleCard = memo(({ style, onOpen }) => {
         <button
             onClick={() => onOpen(style)}
             disabled={outOfStock}
-            className={`group relative bg-white rounded-xl border text-left transition-all duration-150 overflow-hidden
+            className={`group relative bg-gradient-to-br from-white to-gray-50 rounded-xl border text-left transition-all duration-150 overflow-hidden
                 ${outOfStock
                     ? 'border-red-100 bg-red-50/30 opacity-60 cursor-not-allowed'
-                    : 'border-gray-200 hover:border-green-400 hover:shadow-md hover:shadow-green-100 active:scale-[0.97] shadow-sm'}`}
+                    : 'border-gray-100 hover:border-green-400 hover:shadow-md hover:shadow-green-100 active:scale-[0.97] shadow-sm'}`}
         >
             <div className="relative bg-gray-50 aspect-square overflow-hidden">
                 {style.images?.[0]
                     ? <img src={style.images[0]} alt={style.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
-                    : <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">👗</div>
+                    : <div className="w-full h-full flex items-center justify-center text-gray-200"><IconPhoto className="w-12 h-12" /></div>
                 }
                 {!outOfStock && (
                     <div className="absolute inset-0 bg-green-600/0 group-hover:bg-green-600/8 transition-colors duration-150 flex items-end justify-end p-2">
@@ -85,11 +88,11 @@ const VariantPicker = memo(({ style, onClose, onSelect }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="p-5 border-b border-gray-100 flex gap-3 items-center">
                     {style.images?.[0]
-                        ? <img src={style.images[0]} alt={style.name} className="w-14 h-14 rounded-lg object-cover border border-gray-100" />
-                        : <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-2xl">👗</div>}
+                        ? <img src={style.images[0]} alt={style.name} className="w-14 h-14 rounded-xl object-cover border border-gray-100" />
+                        : <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center text-gray-300"><IconPhoto className="w-7 h-7" /></div>}
                     <div className="min-w-0">
                         <p className="font-bold text-gray-800 text-sm truncate">{style.name}</p>
                         <p className="text-xs text-gray-400">{stylePriceLabel(style)}</p>
@@ -134,11 +137,13 @@ const VariantPicker = memo(({ style, onClose, onSelect }) => {
 VariantPicker.displayName = 'VariantPicker';
 
 // ─── Cart Line ────────────────────────────────────────────────────────────────
-const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTotal }) => (
+const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTotal }) => {
+    const { t } = useTranslation();
+    return (
     <div className="flex gap-2.5 py-3 border-b border-gray-100 last:border-0">
         {item.image
-            ? <img src={item.image} alt={item.styleName} className="w-11 h-11 rounded-lg object-cover flex-shrink-0 border border-gray-100" />
-            : <div className="w-11 h-11 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-300 text-lg">👗</div>
+            ? <img src={item.image} alt={item.styleName} className="w-11 h-11 rounded-xl object-cover flex-shrink-0 border border-gray-100" />
+            : <div className="w-11 h-11 rounded-xl bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-300"><IconPhoto className="w-6 h-6" /></div>
         }
         <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
@@ -148,8 +153,8 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                 </div>
                 <button
                     onClick={() => onRemove(item.variantId)}
-                    className="w-5 h-5 rounded flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 transition-all flex-shrink-0"
-                    aria-label="Remove item"
+                    className="w-5 h-5 rounded-lg flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 transition-all flex-shrink-0"
+                    aria-label={t('pos.cart.removeItem')}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -162,13 +167,13 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                     <button
                         onClick={() => onQtyChange(item.variantId, -1)}
                         disabled={item.quantity <= 1}
-                        className="w-6 h-6 rounded border border-red-200 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-300 text-sm font-bold flex items-center justify-center transition-all"
+                        className="w-6 h-6 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-300 text-sm font-bold flex items-center justify-center transition-all"
                     >−</button>
                     <span className="text-sm font-semibold w-6 text-center tabular-nums">{item.quantity}</span>
                     <button
                         onClick={() => onQtyChange(item.variantId, 1)}
                         disabled={item.quantity >= item.stock}
-                        className="w-6 h-6 rounded border border-green-300 text-green-600 hover:bg-green-600 hover:text-white hover:border-green-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-green-400 text-sm font-bold flex items-center justify-center transition-all"
+                        className="w-6 h-6 rounded-lg border border-green-300 text-green-600 hover:bg-green-600 hover:text-white hover:border-green-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-green-400 text-sm font-bold flex items-center justify-center transition-all"
                     >+</button>
                 </div>
                 <div className="flex items-center gap-1">
@@ -178,7 +183,7 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                         max="100"
                         value={item.discount}
                         onChange={e => onDiscountChange(item.variantId, e.target.value)}
-                        className="w-10 border border-gray-200 rounded px-1 py-0.5 text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-green-300"
+                        className="w-10 border border-gray-200 rounded-lg px-1 py-0.5 text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-green-300"
                     />
                     <span className="text-[11px] text-gray-400">%</span>
                 </div>
@@ -188,26 +193,302 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
             </div>
         </div>
     </div>
-));
+    );
+});
 CartLine.displayName = 'CartLine';
+
+// ─── Shift Gate ─────────────────────────────────────────────────────────────
+// Blocking modal shown when the cashier has no open till session — not
+// dismissable, since checkout is gated on a shift existing.
+const OpenShiftModal = memo(({ onOpen, submitting }) => {
+    const [openingFloat, setOpeningFloat] = useState('');
+    const floatNum = parseFloat(openingFloat) || 0;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+                <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-t-2xl">
+                    <p className="font-bold">Open Shift</p>
+                    <p className="text-xs opacity-80 mt-0.5">Count the cash drawer before ringing up any sales</p>
+                </div>
+                <div className="p-5 space-y-3">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Opening Float (KES)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        autoFocus
+                        value={openingFloat}
+                        onChange={e => setOpeningFloat(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                    <button
+                        onClick={() => onOpen(floatNum)}
+                        disabled={submitting || floatNum < 0}
+                        className="w-full py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        {submitting ? 'Opening…' : 'Open Shift & Start Selling'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
+OpenShiftModal.displayName = 'OpenShiftModal';
+
+const CloseShiftModal = memo(({ shift, onClose, onConfirm, submitting }) => {
+    const [closingCount, setClosingCount] = useState('');
+    const countNum = parseFloat(closingCount) || 0;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+                <div className="px-5 py-4 bg-gradient-to-br from-gray-800 to-gray-950 text-white rounded-t-2xl">
+                    <p className="font-bold">Close Shift</p>
+                    <p className="text-xs opacity-70 mt-0.5">Opened with KES {shift.openingFloat.toFixed(2)} float</p>
+                </div>
+                <div className="p-5 space-y-3">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Counted Cash (KES)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        autoFocus
+                        value={closingCount}
+                        onChange={e => setClosingCount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                    <div className="flex gap-3 pt-1">
+                        <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => onConfirm(countNum)}
+                            disabled={submitting || countNum < 0}
+                            className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gray-900 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {submitting ? 'Closing…' : 'Close Shift'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
+CloseShiftModal.displayName = 'CloseShiftModal';
+
+// ─── Sell Gift Card ─────────────────────────────────────────────────────────
+const SellGiftCardModal = memo(({ onClose, onAdd }) => {
+    const [amount, setAmount] = useState('');
+    const amountNum = parseFloat(amount) || 0;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+                <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-t-2xl flex items-center gap-2">
+                    <IconGift className="w-5 h-5" />
+                    <p className="font-bold">Sell Gift Card</p>
+                </div>
+                <div className="p-5 space-y-3">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount (KES)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        autoFocus
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                    <div className="flex gap-3 pt-1">
+                        <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => { if (amountNum > 0) onAdd(amountNum); }}
+                            disabled={amountNum <= 0}
+                            className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Add to Sale
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
+SellGiftCardModal.displayName = 'SellGiftCardModal';
+
+// ─── M-Pesa waiting state ───────────────────────────────────────────────────
+// Shown after an STK push is initiated — checkout can't complete until
+// Safaricom's callback confirms the payment, unlike cash/card which finish
+// the instant the cashier clicks confirm.
+const MpesaWaitingModal = memo(({ status, resultMessage, onCancel, onRetry }) => (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center">
+            {status === 'waiting' && (
+                <>
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-full border-4 border-green-200 border-t-green-600 animate-spin" />
+                    <p className="font-bold text-gray-800">Check customer's phone…</p>
+                    <p className="text-xs text-gray-400 mt-1.5">Waiting for them to enter their M-Pesa PIN</p>
+                    <button onClick={onCancel} className="mt-5 text-xs text-gray-400 hover:text-red-500 transition-colors">Cancel</button>
+                </>
+            )}
+            {(status === 'failed' || status === 'timed_out') && (
+                <>
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center text-red-500"><IconX className="w-6 h-6" /></div>
+                    <p className="font-bold text-gray-800">{status === 'timed_out' ? 'No response in time' : 'Payment failed'}</p>
+                    {resultMessage && <p className="text-xs text-gray-400 mt-1.5">{resultMessage}</p>}
+                    <div className="flex gap-3 mt-5">
+                        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button onClick={onRetry} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-colors">Try Again</button>
+                    </div>
+                </>
+            )}
+        </div>
+    </div>
+));
+MpesaWaitingModal.displayName = 'MpesaWaitingModal';
+
+// Search-as-you-type customer lookup, used by the Store Credit payment branch.
+const CustomerPicker = memo(({ selected, onSelect }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [searching, setSearching] = useState(false);
+
+    useEffect(() => {
+        if (!query.trim()) { setResults([]); return; }
+        setSearching(true);
+        const handle = setTimeout(() => {
+            api.get(`/customers?search=${encodeURIComponent(query.trim())}`)
+                .then(res => setResults(res.data))
+                .catch(() => setResults([]))
+                .finally(() => setSearching(false));
+        }, 300);
+        return () => clearTimeout(handle);
+    }, [query]);
+
+    if (selected) {
+        return (
+            <div className="flex items-center justify-between border border-indigo-200 bg-indigo-50 rounded-xl px-3 py-2.5">
+                <div>
+                    <p className="text-sm font-semibold text-gray-800">{selected.name}</p>
+                    <p className="text-xs text-gray-500">Balance: KES {selected.storeCreditBalance.toFixed(2)}</p>
+                </div>
+                <button onClick={() => onSelect(null)} className="text-xs text-indigo-600 hover:underline">Change</button>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <input
+                autoFocus
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search customer by name or phone…"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            {query.trim() && (
+                <div className="mt-1 border border-gray-100 rounded-xl divide-y divide-gray-50 max-h-40 overflow-y-auto">
+                    {searching ? (
+                        <p className="text-xs text-gray-400 px-3 py-2">Searching…</p>
+                    ) : results.length === 0 ? (
+                        <p className="text-xs text-gray-400 px-3 py-2">No matching customers</p>
+                    ) : results.map(c => (
+                        <button
+                            key={c._id}
+                            onClick={() => onSelect(c)}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center justify-between"
+                        >
+                            <span className="text-gray-700">{c.name}{c.phone ? ` · ${c.phone}` : ''}</span>
+                            <span className="text-gray-400">KES {c.storeCreditBalance.toFixed(2)}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+CustomerPicker.displayName = 'CustomerPicker';
 
 // ─── Payment Modal ────────────────────────────────────────────────────────────
 const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscountChange, paymentMethod, onPaymentMethodChange, onConfirm, processing }) => {
+    const { t } = useTranslation();
     const [tendered, setTendered] = useState('');
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [giftCardInput, setGiftCardInput] = useState('');
+    const [giftCardInfo, setGiftCardInfo] = useState(null); // card doc | 'notfound' | null
+    const [giftCardChecking, setGiftCardChecking] = useState(false);
+    const [mpesaPhone, setMpesaPhone] = useState('');
     const tenderedNum = parseFloat(tendered) || 0;
     const change = paymentMethod === 'Cash' ? tenderedNum - total : 0;
 
-    useEffect(() => { if (!isOpen) setTendered(''); }, [isOpen]);
+    useEffect(() => {
+        if (!isOpen) {
+            setTendered('');
+            setSelectedCustomer(null);
+            setGiftCardInput('');
+            setGiftCardInfo(null);
+            setMpesaPhone('');
+        }
+    }, [isOpen]);
+
+    // Dropping a stale selection when the cashier switches payment method
+    useEffect(() => { setSelectedCustomer(null); setGiftCardInput(''); setGiftCardInfo(null); }, [paymentMethod]);
+
+    useEffect(() => {
+        if (!giftCardInput.trim()) { setGiftCardInfo(null); return; }
+        setGiftCardChecking(true);
+        const handle = setTimeout(() => {
+            api.get(`/giftcards/lookup?code=${encodeURIComponent(giftCardInput.trim())}`)
+                .then(res => setGiftCardInfo(res.data))
+                .catch(() => setGiftCardInfo('notfound'))
+                .finally(() => setGiftCardChecking(false));
+        }, 400);
+        return () => clearTimeout(handle);
+    }, [giftCardInput]);
 
     if (!isOpen) return null;
 
     const quickAmounts = [500, 1000, 2000, 5000].filter(a => a >= total);
+    // Display labels are translated; the underlying value ('Cash'/'M-Pesa'/'Card'/
+    // 'Store Credit'/'Gift Card') stays the canonical English string — it's
+    // compared against elsewhere in this component and sent to the server,
+    // which normalizes it into cash|mpesa|card|store_credit|gift_card and
+    // would break on a translated value.
+    const methodMeta = {
+        'Cash': { Icon: IconCash, label: t('pos.payment.cash') },
+        'M-Pesa': { Icon: IconPhone, label: t('pos.payment.mpesa') },
+        'Card': { Icon: IconCard, label: t('pos.payment.card') },
+        'Store Credit': { Icon: IconTag, label: t('pos.payment.storeCredit') },
+        'Gift Card': { Icon: IconGift, label: t('pos.payment.giftCard') },
+    };
+
+    const giftCardUsable = giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && giftCardInfo.currentBalance >= total;
+    const phoneValid = mpesaPhone.replace(/\D/g, '').length >= 9;
+    const confirmDisabled = processing
+        || (paymentMethod === 'Cash' && tenderedNum < total)
+        || (paymentMethod === 'Store Credit' && (!selectedCustomer || selectedCustomer.storeCreditBalance < total))
+        || (paymentMethod === 'Gift Card' && !giftCardUsable)
+        || (paymentMethod === 'M-Pesa' && !phoneValid);
+
+    const handleConfirmClick = () => {
+        onConfirm({
+            customer: paymentMethod === 'Store Credit' ? selectedCustomer?._id : undefined,
+            giftCardCode: paymentMethod === 'Gift Card' ? giftCardInfo?.code : undefined,
+            phone: paymentMethod === 'M-Pesa' ? mpesaPhone.replace(/\D/g, '') : undefined,
+        });
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                <div className="px-5 py-4 bg-green-600 text-white">
-                    <p className="text-sm font-medium opacity-80">Amount Due</p>
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+                <div className="px-5 py-4 bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-t-2xl">
+                    <p className="text-sm font-medium opacity-80">{t('pos.payment.amountDue')}</p>
                     <p className="text-3xl font-black tabular-nums mt-0.5">
                         KES {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
@@ -215,7 +496,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                 <div className="p-5 space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Order Discount (%)</label>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('pos.payment.orderDiscount')}</label>
                         <input
                             type="number"
                             min="0"
@@ -227,31 +508,115 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                         />
                         {cartDiscount > 0 && (
                             <p className="text-[11px] text-red-500 mt-1">
-                                −KES {(total / (1 - cartDiscount / 100) * cartDiscount / 100).toFixed(2)} deducted from order
+                                {t('pos.payment.deductedFromOrder', { amount: (total / (1 - cartDiscount / 100) * cartDiscount / 100).toFixed(2) })}
                             </p>
                         )}
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Payment Method</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {['Cash', 'M-Pesa', 'Card'].map(m => (
-                                <button
-                                    key={m}
-                                    onClick={() => onPaymentMethodChange(m)}
-                                    className={`py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
-                                        ? 'border-green-600 bg-green-600 text-white shadow-sm'
-                                        : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
-                                >
-                                    {m === 'Cash' ? '💵 Cash' : m === 'M-Pesa' ? '📱 M-Pesa' : '💳 Card'}
-                                </button>
-                            ))}
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('pos.payment.paymentMethod')}</label>
+                        {/* Two deliberate groups — pay-with-money, then pay-with-stored-value —
+                            rather than 5 buttons in a 3-col grid, which leaves an empty cell. */}
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-3 gap-2">
+                                {['Cash', 'M-Pesa', 'Card'].map(m => {
+                                    const { Icon } = methodMeta[m];
+                                    return (
+                                        <button
+                                            key={m}
+                                            onClick={() => onPaymentMethodChange(m)}
+                                            className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                                ? 'border-green-600 bg-green-600 text-white shadow-sm'
+                                                : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            {methodMeta[m].label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {['Store Credit', 'Gift Card'].map(m => {
+                                    const { Icon } = methodMeta[m];
+                                    return (
+                                        <button
+                                            key={m}
+                                            onClick={() => onPaymentMethodChange(m)}
+                                            className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                                ? 'border-green-600 bg-green-600 text-white shadow-sm'
+                                                : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            {methodMeta[m].label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
+                    {paymentMethod === 'M-Pesa' && (
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Customer's M-Pesa Phone</label>
+                            <input
+                                autoFocus
+                                type="tel"
+                                value={mpesaPhone}
+                                onChange={e => setMpesaPhone(e.target.value)}
+                                placeholder="e.g. 0712 345 678"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
+                            />
+                            <p className="text-[11px] text-gray-400 mt-1.5">An STK push prompt will be sent to this number</p>
+                        </div>
+                    )}
+
+                    {paymentMethod === 'Store Credit' && (
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Customer</label>
+                            <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
+                            {selectedCustomer && selectedCustomer.storeCreditBalance < total && (
+                                <p className="text-[11px] text-red-500 mt-1.5">
+                                    Insufficient balance — has KES {selectedCustomer.storeCreditBalance.toFixed(2)}, needs KES {total.toFixed(2)}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {paymentMethod === 'Gift Card' && (
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Gift Card Code</label>
+                            <input
+                                autoFocus
+                                value={giftCardInput}
+                                onChange={e => setGiftCardInput(e.target.value)}
+                                placeholder="e.g. GC-3F9A2B1C0D"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            />
+                            {giftCardChecking && <p className="text-[11px] text-gray-400 mt-1.5">Checking…</p>}
+                            {!giftCardChecking && giftCardInfo === 'notfound' && (
+                                <p className="text-[11px] text-red-500 mt-1.5">No gift card found for that code</p>
+                            )}
+                            {!giftCardChecking && giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status !== 'active' && (
+                                <p className="text-[11px] text-red-500 mt-1.5">This card is {giftCardInfo.status}, not active</p>
+                            )}
+                            {!giftCardChecking && giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && (
+                                giftCardInfo.currentBalance >= total ? (
+                                    <div className="mt-2 p-2.5 bg-green-50 border border-green-200 rounded-xl flex justify-between text-xs">
+                                        <span className="text-green-700 font-semibold">Balance KES {giftCardInfo.currentBalance.toFixed(2)}</span>
+                                        <span className="text-gray-500">Remaining after: KES {(giftCardInfo.currentBalance - total).toFixed(2)}</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-red-500 mt-1.5">
+                                        Balance KES {giftCardInfo.currentBalance.toFixed(2)} is less than the sale total — gift cards can't split-pay a sale
+                                    </p>
+                                )
+                            )}
+                        </div>
+                    )}
+
                     {paymentMethod === 'Cash' && (
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Cash Tendered</label>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('pos.payment.cashTendered')}</label>
                             <input
                                 type="number"
                                 min={0}
@@ -272,25 +637,25 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                 <div className="flex gap-1.5 mt-2">
                                     {quickAmounts.slice(0, 3).map(a => (
                                         <button key={a} onClick={() => setTendered(String(a))}
-                                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold border border-green-200 text-green-700 hover:bg-green-50 transition-colors">
+                                            className="flex-1 py-1.5 rounded-xl text-xs font-semibold border border-green-200 text-green-700 hover:bg-green-50 transition-colors">
                                             {a.toLocaleString()}
                                         </button>
                                     ))}
                                     <button onClick={() => setTendered(String(Math.ceil(total / 50) * 50))}
-                                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold border border-green-400 bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
-                                        Exact
+                                        className="flex-1 py-1.5 rounded-xl text-xs font-semibold border border-green-400 bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
+                                        {t('pos.payment.exact')}
                                     </button>
                                 </div>
                             )}
                             {tenderedNum > 0 && change >= 0 && (
                                 <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex justify-between items-center">
-                                    <span className="text-sm font-semibold text-green-700">Change to give</span>
+                                    <span className="text-sm font-semibold text-green-700">{t('pos.payment.changeToGive')}</span>
                                     <span className="text-xl font-black text-green-700 tabular-nums">KES {change.toFixed(2)}</span>
                                 </div>
                             )}
                             {tenderedNum > 0 && change < 0 && (
                                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex justify-between items-center">
-                                    <span className="text-sm font-semibold text-red-600">Short by</span>
+                                    <span className="text-sm font-semibold text-red-600">{t('pos.payment.shortBy')}</span>
                                     <span className="text-xl font-black text-red-600 tabular-nums">KES {Math.abs(change).toFixed(2)}</span>
                                 </div>
                             )}
@@ -300,14 +665,14 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                 <div className="px-5 pb-5 flex gap-3">
                     <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
-                        Cancel
+                        {t('pos.payment.cancel')}
                     </button>
                     <button
-                        onClick={onConfirm}
-                        disabled={processing || (paymentMethod === 'Cash' && tenderedNum < total)}
-                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        onClick={handleConfirmClick}
+                        disabled={confirmDisabled}
+                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
                     >
-                        {processing ? 'Processing…' : '✓ Confirm Sale'}
+                        {processing ? t('pos.payment.processing') : <><IconCheck className="w-4 h-4" /> {t('pos.payment.confirmSale')}</>}
                     </button>
                 </div>
             </div>
@@ -319,12 +684,23 @@ PaymentModal.displayName = 'PaymentModal';
 // ─── Receipt Modal ────────────────────────────────────────────────────────────
 const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
     const [qrUrl, setQrUrl] = useState('');
+    const [etimsQrUrl, setEtimsQrUrl] = useState('');
 
     useEffect(() => {
         if (sale?._id) {
             QRCode.toDataURL(JSON.stringify({ id: sale._id, total: sale.totalAmount, date: sale.createdAt }))
                 .then(setQrUrl)
                 .catch(() => {});
+        }
+        // Distinct from the sale-lookup QR above — this one is KRA's eTIMS
+        // control-unit invoice QR, only present once eTIMS submission has
+        // succeeded (see server/services/etims.js). Never conflate the two.
+        if (sale?.etimsQrPayload) {
+            QRCode.toDataURL(sale.etimsQrPayload)
+                .then(setEtimsQrUrl)
+                .catch(() => {});
+        } else {
+            setEtimsQrUrl('');
         }
     }, [sale]);
 
@@ -334,7 +710,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div id="receipt-print" className="p-6">
                     <div className="text-center mb-5">
                         <img src={businessSettings.logoPath} alt="Logo" className="w-12 h-12 object-contain mx-auto mb-2" onError={e => e.target.style.display='none'} />
@@ -387,19 +763,52 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                             <span>TOTAL</span>
                             <span>KES {sale.totalAmount?.toFixed(2)}</span>
                         </div>
+                        {sale.giftCardRedeemed?.code && (
+                            <div className="flex justify-between text-gray-500">
+                                <span>Paid via Gift Card {sale.giftCardRedeemed.code}</span>
+                                <span>−KES {sale.giftCardRedeemed.amount?.toFixed(2)}</span>
+                            </div>
+                        )}
                     </div>
 
-                    {qrUrl && (
-                        <div className="mt-4 flex justify-center">
-                            <img src={qrUrl} alt="QR" className="w-16 h-16" />
+                    {sale.giftCardsSold?.length > 0 && (
+                        <div className="border-t border-dashed border-gray-200 pt-3 mt-3 font-mono text-[11px] space-y-1">
+                            <p className="font-bold text-gray-700 flex items-center gap-1.5"><IconGift className="w-3.5 h-3.5" /> Gift Card{sale.giftCardsSold.length > 1 ? 's' : ''} Issued</p>
+                            {sale.giftCardsSold.map((g, i) => (
+                                <div key={i} className="flex justify-between">
+                                    <span className="font-bold tracking-wider">{g.code}</span>
+                                    <span>KES {g.amount.toFixed(2)}</span>
+                                </div>
+                            ))}
+                            <p className="text-gray-400 text-[10px]">Keep this code safe — it's required to redeem the card.</p>
                         </div>
                     )}
+
+                    {qrUrl && (
+                        <div className="mt-4 flex flex-col items-center">
+                            <img src={qrUrl} alt="Receipt lookup QR" className="w-16 h-16" />
+                            <p className="text-[9px] text-gray-400 mt-1">Scan to look up this receipt</p>
+                        </div>
+                    )}
+
+                    {sale.etimsStatus === 'accepted' && etimsQrUrl && (
+                        <div className="border-t border-dashed border-gray-200 pt-3 mt-3 flex flex-col items-center">
+                            <img src={etimsQrUrl} alt="KRA eTIMS QR" className="w-16 h-16" />
+                            <p className="text-[9px] text-gray-400 mt-1 font-mono">eTIMS Invoice: {sale.etimsInvoiceNumber}</p>
+                        </div>
+                    )}
+                    {sale.etimsStatus === 'unreachable' && (
+                        <p className="text-center text-[9px] text-amber-500 mt-3">eTIMS invoice pending — will be submitted when reachable</p>
+                    )}
+
                     <p className="text-center text-[10px] text-gray-400 mt-3">{businessSettings.receiptFooter}</p>
                 </div>
 
                 <div className="flex gap-3 px-5 pb-5">
                     <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Close</button>
-                    <button onClick={onPrint} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">🖨️ Print</button>
+                    <button onClick={onPrint} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5">
+                        <IconPrinter className="w-4 h-4" /> Print
+                    </button>
                 </div>
             </div>
         </div>
@@ -409,6 +818,7 @@ ReceiptModal.displayName = 'ReceiptModal';
 
 // ─── Main POS ─────────────────────────────────────────────────────────────────
 export default function POSPage() {
+    const { t, i18n } = useTranslation();
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
 
@@ -429,7 +839,61 @@ export default function POSPage() {
     const [mobileCartOpen, setMobileCartOpen] = useState(false);
     const [pickerStyle, setPickerStyle] = useState(null); // style currently open in the size/color picker
 
+    // undefined = not yet loaded, null = no open shift, object = open shift
+    const [currentShift, setCurrentShift] = useState(undefined);
+    const [shiftSubmitting, setShiftSubmitting] = useState(false);
+    const [showCloseShift, setShowCloseShift] = useState(false);
+
+    // Gift cards being sold in this transaction — independent of the cart's
+    // merchandise items and of however the sale itself gets paid for.
+    const [giftCardsToSell, setGiftCardsToSell] = useState([]); // [{ tempId, amount }]
+    const [showSellGiftCard, setShowSellGiftCard] = useState(false);
+
+    // M-Pesa STK-push wait state — null when not mid-payment, otherwise
+    // { pendingId, status: 'waiting'|'failed'|'timed_out', resultMessage }
+    const [mpesaWaiting, setMpesaWaiting] = useState(null);
+
     const searchRef = useRef(null);
+
+    // ── Shift gate: load the caller's own open shift (if any) on mount ──
+    useEffect(() => {
+        api.get('/shifts/current')
+            .then(res => setCurrentShift(res.data))
+            .catch(() => setCurrentShift(null));
+    }, []);
+
+    const handleOpenShift = useCallback(async (openingFloat) => {
+        setShiftSubmitting(true);
+        try {
+            const res = await api.post('/shifts/open', { openingFloat });
+            setCurrentShift(res.data);
+            toast.success('Shift opened');
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to open shift');
+        } finally {
+            setShiftSubmitting(false);
+        }
+    }, []);
+
+    const handleCloseShift = useCallback(async (closingCount) => {
+        if (!currentShift?._id) return;
+        setShiftSubmitting(true);
+        try {
+            const res = await api.post(`/shifts/${currentShift._id}/close`, { closingCount });
+            const { discrepancy } = res.data;
+            if (Math.abs(discrepancy) < 0.01) {
+                toast.success('Shift closed — drawer balanced');
+            } else {
+                toast.warning(`Shift closed — ${discrepancy > 0 ? 'over' : 'short'} by KES ${Math.abs(discrepancy).toFixed(2)}`);
+            }
+            setShowCloseShift(false);
+            setCurrentShift(null);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to close shift');
+        } finally {
+            setShiftSubmitting(false);
+        }
+    }, [currentShift]);
 
     // ── Load all styles (called on mount + after each sale) ──
     const loadStyles = useCallback(async () => {
@@ -438,11 +902,11 @@ export default function POSPage() {
             const res = await api.get('/styles');
             setAllStyles(res.data);
         } catch {
-            toast.error('Failed to load styles');
+            toast.error(t('pos.toast.stylesLoadFailed'));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => { loadStyles(); }, [loadStyles]);
 
@@ -489,17 +953,18 @@ export default function POSPage() {
 
     // ── Add a specific variant to the cart ──
     const addVariantToCart = useCallback((style, variant) => {
-        if (variant.stock < 1) { toast.error(`${style.name} (${variant.size}/${variant.color}) is out of stock`); return; }
+        const label = `${style.name} (${variant.size}/${variant.color})`;
+        if (variant.stock < 1) { toast.error(t('pos.toast.outOfStock', { name: label })); return; }
         setCart(prev => {
             const ex = prev.find(i => i.variantId === variant._id);
             if (ex) {
                 if (ex.quantity >= variant.stock) {
-                    toast.warning(`Only ${variant.stock} unit${variant.stock !== 1 ? 's' : ''} in stock`);
+                    toast.warning(t('pos.toast.onlyInStock', { count: variant.stock }));
                     return prev;
                 }
                 return prev.map(i => i.variantId === variant._id ? { ...i, quantity: i.quantity + 1 } : i);
             }
-            toast.success(`${style.name} (${variant.size}/${variant.color}) added`, { autoClose: 1000, hideProgressBar: true });
+            toast.success(t('pos.toast.itemAdded', { name: label }), { autoClose: 1000, hideProgressBar: true });
             return [...prev, {
                 variantId: variant._id,
                 styleId: style._id,
@@ -514,7 +979,7 @@ export default function POSPage() {
             }];
         });
         setPickerStyle(null);
-    }, []);
+    }, [t]);
 
     // ── Keyboard shortcuts ──
     useEffect(() => {
@@ -536,7 +1001,11 @@ export default function POSPage() {
     // ── Cart computations ──
     const calcTotal = useCallback(item => item.unitPrice * item.quantity * (1 - item.discount / 100), []);
     const subtotal  = useMemo(() => cart.reduce((s, it) => s + calcTotal(it), 0), [cart, calcTotal]);
-    const grandTotal = useMemo(() => subtotal * (1 - cartDiscount / 100), [subtotal, cartDiscount]);
+    const giftCardsTotal = useMemo(() => giftCardsToSell.reduce((s, g) => s + g.amount, 0), [giftCardsToSell]);
+    // Gift cards sold are added at face value after the merchandise discount —
+    // a gift card isn't merchandise and shouldn't be discounted (must match
+    // the server's calculatedTotal in salesController.createSale exactly).
+    const grandTotal = useMemo(() => subtotal * (1 - cartDiscount / 100) + giftCardsTotal, [subtotal, cartDiscount, giftCardsTotal]);
     const cartCount  = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
     // ── Quantity change ──
@@ -545,10 +1014,10 @@ export default function POSPage() {
             if (item.variantId !== variantId) return item;
             const newQ = item.quantity + delta;
             if (newQ < 1) return item;
-            if (newQ > item.stock) { toast.warning(`Only ${item.stock} in stock`); return item; }
+            if (newQ > item.stock) { toast.warning(t('pos.toast.onlyInStock', { count: item.stock })); return item; }
             return { ...item, quantity: newQ };
         }));
-    }, []);
+    }, [t]);
 
     const removeFromCart = useCallback(variantId => setCart(prev => prev.filter(i => i.variantId !== variantId)), []);
 
@@ -584,9 +1053,9 @@ export default function POSPage() {
         if (match) {
             addVariantToCart(match.style, match.variant);
         } else {
-            toast.error(`No item found for barcode: ${barcode}`);
+            toast.error(t('pos.toast.noItemForBarcode', { barcode }));
         }
-    }, [resolveBarcode, addVariantToCart]);
+    }, [resolveBarcode, addVariantToCart, t]);
 
     // ── Manual barcode: type in search box + Enter ──
     const handleSearchKeyDown = useCallback(async e => {
@@ -596,7 +1065,33 @@ export default function POSPage() {
     }, [search, resolveBarcode, addVariantToCart]);
 
     // ── Confirm payment ──
-    const handleConfirmPayment = useCallback(async () => {
+    const handleConfirmPayment = useCallback(async ({ customer, giftCardCode, phone } = {}) => {
+        // M-Pesa can't complete synchronously — it starts an STK push and
+        // waits for Safaricom's async callback instead of creating the sale
+        // right away. Cash/Card/Store Credit/Gift Card all still complete
+        // the instant the cashier confirms.
+        if (paymentMethod === 'M-Pesa') {
+            setProcessing(true);
+            try {
+                const payload = {
+                    phone,
+                    items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
+                    totalAmount: grandTotal,
+                    cartDiscount,
+                    shift: currentShift?._id,
+                    giftCardsSold: giftCardsToSell.map(({ amount }) => ({ amount })),
+                };
+                const res = await api.post('/payments/mpesa/initiate', payload);
+                setShowPayment(false);
+                setMpesaWaiting({ pendingId: res.data.pendingPaymentId, status: 'waiting', resultMessage: null });
+            } catch (err) {
+                toast.error(err.response?.data?.error || 'Failed to initiate M-Pesa payment');
+            } finally {
+                setProcessing(false);
+            }
+            return;
+        }
+
         setProcessing(true);
         try {
             const payload = {
@@ -604,22 +1099,62 @@ export default function POSPage() {
                 totalAmount: grandTotal,
                 cartDiscount,
                 paymentMethod,
+                shift: currentShift?._id,
+                customer,
+                giftCardCode,
+                giftCardsSold: giftCardsToSell.map(({ amount }) => ({ amount })),
             };
             const res = await api.post('/sales', payload);
             setSaleDetails(res.data);
-            toast.success('Sale completed!');
+            toast.success(t('pos.toast.saleCompleted'));
             setCart([]);
             setCartDiscount(0);
+            setGiftCardsToSell([]);
             setShowPayment(false);
             setMobileCartOpen(false);
             setShowReceipt(true);
             loadStyles(); // refresh stock counts
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Failed to complete sale');
+            toast.error(err.response?.data?.error || t('pos.toast.saleFailed'));
         } finally {
             setProcessing(false);
         }
-    }, [cart, grandTotal, cartDiscount, paymentMethod, loadStyles]);
+    }, [cart, grandTotal, cartDiscount, paymentMethod, currentShift, giftCardsToSell, loadStyles, t]);
+
+    // ── Poll for M-Pesa STK-push confirmation while mpesaWaiting is active ──
+    useEffect(() => {
+        if (!mpesaWaiting || mpesaWaiting.status !== 'waiting') return undefined;
+        let cancelled = false;
+
+        const poll = async () => {
+            try {
+                const res = await api.get(`/payments/mpesa/${mpesaWaiting.pendingId}/status`);
+                if (cancelled) return;
+                if (res.data.status === 'confirmed') {
+                    const saleRes = await api.get(`/sales/${res.data.saleId}`);
+                    if (cancelled) return;
+                    setSaleDetails(saleRes.data);
+                    setCart([]);
+                    setCartDiscount(0);
+                    setGiftCardsToSell([]);
+                    setMobileCartOpen(false);
+                    setMpesaWaiting(null);
+                    setShowReceipt(true);
+                    toast.success(t('pos.toast.saleCompleted'));
+                    loadStyles();
+                } else if (res.data.status === 'failed' || res.data.status === 'timed_out') {
+                    setMpesaWaiting(prev => prev && { ...prev, status: res.data.status, resultMessage: res.data.resultMessage });
+                }
+                // else still pending — keep polling
+            } catch {
+                // transient network error on a single poll — try again rather than failing the whole wait
+            }
+        };
+
+        poll();
+        const interval = setInterval(poll, 2500);
+        return () => { cancelled = true; clearInterval(interval); };
+    }, [mpesaWaiting, t, loadStyles]);
 
     // ── Print receipt ──
     const handlePrint = useCallback(() => {
@@ -648,7 +1183,7 @@ export default function POSPage() {
             {/* ══ Header ══════════════════════════════════════════════════════ */}
             <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 flex-shrink-0 z-30 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <img src={businessSettings.logoPath} alt="Logo" className="w-8 h-8 object-contain rounded"
+                    <img src={businessSettings.logoPath} alt="Logo" className="w-8 h-8 object-contain rounded-lg"
                         onError={e => { e.target.style.display = 'none'; }} />
                     <div className="leading-tight">
                         <p className="font-black text-gray-800 text-sm">{businessSettings.name}</p>
@@ -658,23 +1193,35 @@ export default function POSPage() {
 
                 <div className="flex items-center gap-2">
                     <div className="hidden lg:flex items-center gap-2 text-[10px] text-gray-400 mr-2">
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono">F2</kbd><span>search</span>
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono">1–9</kbd><span>category</span>
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono">Ctrl+B</kbd><span>scan</span>
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded font-mono">Ctrl+↵</kbd><span>pay</span>
+                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded-lg font-mono">F2</kbd><span>search</span>
+                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded-lg font-mono">1–9</kbd><span>category</span>
+                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded-lg font-mono">Ctrl+B</kbd><span>scan</span>
+                        <kbd className="px-1.5 py-0.5 bg-gray-100 rounded-lg font-mono">Ctrl+↵</kbd><span>pay</span>
                     </div>
 
                     <button
                         onClick={() => setMobileCartOpen(v => !v)}
                         className="relative lg:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                     >
-                        🛒
+                        <IconCart className="w-4 h-4" />
                         {cartCount > 0 && (
                             <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                                 {cartCount > 9 ? '9+' : cartCount}
                             </span>
                         )}
                     </button>
+
+                    {currentShift && (
+                        <button
+                            onClick={() => setShowCloseShift(true)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 rounded-xl px-2.5 py-1.5 transition-colors flex-shrink-0"
+                            title="Click to close this shift"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                            <span className="hidden sm:inline">Shift open · KES {currentShift.openingFloat.toFixed(2)} float</span>
+                            <span className="sm:hidden">Shift</span>
+                        </button>
+                    )}
 
                     <div className="hidden sm:flex items-center gap-2 border-l border-gray-100 pl-3 ml-1">
                         <div className="w-7 h-7 rounded-full bg-indigo-600 text-white text-[11px] font-black flex items-center justify-center">
@@ -686,9 +1233,21 @@ export default function POSPage() {
                         </div>
                     </div>
 
+                    <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden text-xs font-bold ml-1">
+                        {['en', 'sw'].map(lng => (
+                            <button
+                                key={lng}
+                                onClick={() => setPosLocale(lng)}
+                                className={`px-2 py-1.5 transition-colors ${i18n.language === lng ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                            >
+                                {lng.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 border border-gray-200 hover:border-red-300 rounded-lg px-2.5 py-1.5 transition-colors ml-1"
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 border border-gray-200 hover:border-red-300 rounded-xl px-2.5 py-1.5 transition-colors ml-1"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
@@ -719,7 +1278,7 @@ export default function POSPage() {
                                 className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-gray-50 focus:bg-white transition-colors"
                             />
                             {search && (
-                                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-lg leading-none">×</button>
+                                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
                             )}
                         </div>
 
@@ -772,7 +1331,7 @@ export default function POSPage() {
                                         : 'text-gray-500 border-gray-200 hover:border-indigo-300 bg-white'}`}
                                 >
                                     <span className={`hidden lg:inline text-[10px] font-mono opacity-60 ${active ? 'text-indigo-200' : 'text-gray-400'}`}>{idx + 1}</span>
-                                    {c === 'all' ? 'All' : c}
+                                    {c === 'all' ? t('pos.categories.all') : c}
                                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
                                         {count}
                                     </span>
@@ -787,11 +1346,11 @@ export default function POSPage() {
                                 <BarcodeScannerComponent width={300} height={200} onUpdate={handleScan} />
                             </div>
                             <div className="text-white text-xs space-y-1 hidden md:block">
-                                <p className="font-semibold text-indigo-300">📷 Camera Scanner</p>
+                                <p className="font-semibold text-indigo-300 flex items-center gap-1.5"><IconCamera className="w-4 h-4" /> Camera Scanner</p>
                                 <p className="text-gray-400">Point camera at a garment's barcode</p>
-                                <p className="text-gray-500 text-[10px]">Or type it in search + Enter</p>
-                                <button onClick={() => setShowScanner(false)} className="mt-2 text-gray-400 hover:text-white text-xs border border-gray-600 rounded px-2 py-1 transition-colors">
-                                    Close ✕
+                                <p className="text-gray-400 text-[10px]">Or type it in search + Enter</p>
+                                <button onClick={() => setShowScanner(false)} className="mt-2 flex items-center gap-1 text-gray-400 hover:text-white text-xs border border-gray-600 rounded-lg px-2 py-1 transition-colors">
+                                    <IconX className="w-3 h-3" /> Close
                                 </button>
                             </div>
                         </div>
@@ -812,7 +1371,7 @@ export default function POSPage() {
                             </div>
                         ) : styles.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400 py-20">
-                                <div className="text-5xl mb-4">🔍</div>
+                                <IconSearch className="w-12 h-12 mb-4 text-gray-300" />
                                 <p className="font-semibold text-gray-500">No styles found</p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {category !== 'all' ? `No items in "${category}"` : 'Try a different search'}
@@ -849,21 +1408,29 @@ export default function POSPage() {
                 <aside className={`
                     ${mobileCartOpen ? 'flex' : 'hidden'} lg:flex
                     fixed inset-0 z-40 lg:static lg:z-auto
-                    flex-col bg-white lg:w-[360px] xl:w-[400px] border-l border-gray-200
+                    flex-col bg-gradient-to-b from-white to-gray-50 lg:w-[360px] xl:w-[400px] border-l border-gray-200
                 `}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
                         <div className="flex items-center gap-2">
-                            <h2 className="font-bold text-gray-800">Current Order</h2>
+                            <h2 className="font-bold text-gray-800">{t('pos.cart.title')}</h2>
                             {cartCount > 0 && (
                                 <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
                                     {cartCount}
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowSellGiftCard(true)}
+                                title="Sell a gift card"
+                                aria-label="Sell a gift card"
+                                className="w-7 h-7 flex items-center justify-center text-indigo-600 hover:text-white hover:bg-indigo-500 rounded-xl transition-all border border-indigo-200 hover:border-indigo-500 flex-shrink-0"
+                            >
+                                <IconGift className="w-4 h-4" />
+                            </button>
                             {cart.length > 0 && (
-                                <button onClick={() => { setCart([]); setCartDiscount(0); }} className="text-xs text-red-500 hover:text-white hover:bg-red-500 px-2 py-0.5 rounded font-semibold transition-all border border-red-200 hover:border-red-500">
-                                    Clear
+                                <button onClick={() => { setCart([]); setCartDiscount(0); }} className="text-xs text-red-500 hover:text-white hover:bg-red-500 px-2 py-0.5 rounded-lg font-semibold transition-all border border-red-200 hover:border-red-500">
+                                    {t('pos.cart.clear')}
                                 </button>
                             )}
                             <button onClick={() => setMobileCartOpen(false)} className="lg:hidden text-gray-400 hover:text-gray-600 transition-colors">
@@ -882,8 +1449,8 @@ export default function POSPage() {
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                 </div>
-                                <p className="font-semibold text-gray-400 text-sm">Cart is empty</p>
-                                <p className="text-xs text-gray-300 mt-1">Tap a style to pick a size/color</p>
+                                <p className="font-semibold text-gray-400 text-sm">{t('pos.cart.emptyTitle')}</p>
+                                <p className="text-xs text-gray-400 mt-1">{t('pos.cart.emptySubtitle')}</p>
                             </div>
                         ) : (
                             cart.map(item => (
@@ -899,22 +1466,39 @@ export default function POSPage() {
                         )}
                     </div>
 
+                    {giftCardsToSell.length > 0 && (
+                        <div className="px-4 py-2 border-t border-gray-100 flex-shrink-0 space-y-1">
+                            {giftCardsToSell.map(g => (
+                                <div key={g.tempId} className="flex items-center justify-between text-xs bg-indigo-50 border border-indigo-100 rounded-xl px-2.5 py-1.5">
+                                    <span className="text-indigo-700 font-semibold flex items-center gap-1.5"><IconGift className="w-3.5 h-3.5" /> Gift Card · KES {g.amount.toFixed(2)}</span>
+                                    <button onClick={() => setGiftCardsToSell(prev => prev.filter(x => x.tempId !== g.tempId))} className="text-indigo-400 hover:text-red-500 transition-colors">×</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="border-t border-gray-100 px-4 pt-3 pb-4 flex-shrink-0 space-y-3 bg-white">
                         <div className="space-y-1 text-sm">
                             <div className="flex justify-between text-gray-500">
-                                <span>Subtotal</span>
+                                <span>{t('pos.cart.subtotal')}</span>
                                 <span className="tabular-nums text-green-700 font-medium">KES {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                             </div>
                             {cartDiscount > 0 && (
                                 <div className="flex justify-between text-red-500">
-                                    <span>Discount ({cartDiscount}%)</span>
+                                    <span>{t('pos.cart.discount', { pct: cartDiscount })}</span>
                                     <span className="tabular-nums">−KES {(subtotal * cartDiscount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            {giftCardsTotal > 0 && (
+                                <div className="flex justify-between text-indigo-600">
+                                    <span>Gift Cards</span>
+                                    <span className="tabular-nums">+KES {giftCardsTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
                         </div>
 
                         <div className="flex justify-between items-baseline border-t border-gray-100 pt-3">
-                            <span className="font-bold text-gray-800 text-base">Total</span>
+                            <span className="font-bold text-gray-800 text-base">{t('pos.cart.total')}</span>
                             <span className="font-black text-xl text-green-700 tabular-nums">
                                 KES {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </span>
@@ -925,13 +1509,48 @@ export default function POSPage() {
                             disabled={cart.length === 0}
                             className="w-full py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm shadow-sm"
                         >
-                            {cart.length === 0 ? 'Add items to checkout' : `Checkout  ·  KES ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                            {cart.length === 0
+                                ? (giftCardsToSell.length > 0 ? 'Add an item to check out with this gift card' : t('pos.cart.checkoutEmpty'))
+                                : `${t('pos.cart.checkout')}  ·  KES ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                         </button>
                     </div>
                 </aside>
             </div>
 
             {/* ══ Modals ══════════════════════════════════════════════════════ */}
+            {currentShift === null && (
+                <OpenShiftModal onOpen={handleOpenShift} submitting={shiftSubmitting} />
+            )}
+
+            {showCloseShift && currentShift && (
+                <CloseShiftModal
+                    shift={currentShift}
+                    onClose={() => setShowCloseShift(false)}
+                    onConfirm={handleCloseShift}
+                    submitting={shiftSubmitting}
+                />
+            )}
+
+            {showSellGiftCard && (
+                <SellGiftCardModal
+                    onClose={() => setShowSellGiftCard(false)}
+                    onAdd={(amount) => {
+                        setGiftCardsToSell(prev => [...prev, { tempId: `${Date.now()}-${Math.random()}`, amount }]);
+                        setShowSellGiftCard(false);
+                        toast.success(`Gift card (KES ${amount.toFixed(2)}) added to sale`);
+                    }}
+                />
+            )}
+
+            {mpesaWaiting && (
+                <MpesaWaitingModal
+                    status={mpesaWaiting.status}
+                    resultMessage={mpesaWaiting.resultMessage}
+                    onCancel={() => setMpesaWaiting(null)}
+                    onRetry={() => { setMpesaWaiting(null); setShowPayment(true); }}
+                />
+            )}
+
             <VariantPicker
                 style={pickerStyle}
                 onClose={() => setPickerStyle(null)}

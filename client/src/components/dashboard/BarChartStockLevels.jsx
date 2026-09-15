@@ -14,7 +14,7 @@ function CustomTooltip({ active, payload, label }) {
     if (!active || !payload?.length) return null;
     const stock = payload[0].value;
     return (
-        <div className="bg-white border border-gray-200 shadow-lg rounded-lg px-3 py-2 text-sm">
+        <div className="bg-white border border-gray-200 shadow-lg rounded-xl px-3 py-2 text-sm">
             <p className="font-semibold text-gray-800 mb-0.5">{label}</p>
             <p style={{ color: stockColor(stock) }} className="font-bold">
                 {stock === 0 ? 'Out of stock' : `${stock} units`}
@@ -25,7 +25,7 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function BarChartStockLevels({ data = [] }) {
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-start justify-between mb-4">
                 <div>
                     <h2 className="font-semibold text-gray-800">Variant Stock Levels</h2>

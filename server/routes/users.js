@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
 const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { logAudit } = require('../utils/auditLogger');
 
 // GET all users (admin only)
 router.get('/', protect, adminOnly, async (req, res) => {
@@ -29,6 +30,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
         }
 
         await user.save();
+        logAudit({ action: 'user_updated', details: { userId: user._id, changes: { name, role, passwordChanged: !!password } }, userId: req.user.id });
         const result = user.toObject();
         delete result.password;
         res.json(result);
@@ -49,6 +51,7 @@ router.delete('/:id', protect, adminOnly, async (req, res) => {
         }
 
         await user.deleteOne();
+        logAudit({ action: 'user_deleted', details: { userId: user._id, username: user.username }, userId: req.user.id });
         res.json({ message: 'User deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete user' });

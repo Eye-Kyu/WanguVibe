@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
+const { globalLimiter } = require('./middleware/rateLimiters');
 
 const authRoutes = require('./routes/auth');
 const styleRoutes = require('./routes/styles');
@@ -13,14 +16,21 @@ const inventoryRoutes = require('./routes/inventory');
 const auditRoutes = require('./routes/audit');
 const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
+const shiftRoutes = require('./routes/shifts');
+const giftcardRoutes = require('./routes/giftcards');
+const paymentsRoutes = require('./routes/payments');
+const etimsRoutes = require('./routes/etims');
 
 
 connectDB();
 
 const app = express();
 
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+app.use(cookieParser());
 app.use(express.json()); //  Parse JSON bodies
+app.use(globalLimiter);
 
 
 // Routes
@@ -31,6 +41,10 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/shifts', shiftRoutes);
+app.use('/api/giftcards', giftcardRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/etims', etimsRoutes);
 
 
 //admin assigns role

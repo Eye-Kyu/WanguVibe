@@ -1,5 +1,6 @@
 const Style = require('../models/Style');
 const Variant = require('../models/Variant');
+const { logAudit } = require('../utils/auditLogger');
 
 // GET all styles, each with its variants embedded.
 // Boutique catalogs are small enough (compared to a mini-mart's flat SKU count)
@@ -90,6 +91,7 @@ exports.createStyle = async (req, res) => {
       }
     }
 
+    logAudit({ action: 'style_created', details: { styleId: style._id, name: style.name }, userId: req.user.id });
     res.status(201).json({ ...style.toObject(), variants: createdVariants });
   } catch (err) {
     console.error('Error creating style:', err);
@@ -109,6 +111,7 @@ exports.updateStyle = async (req, res) => {
 
     const updated = await Style.findByIdAndUpdate(req.params.id, { $set: setFields }, { new: true });
     if (!updated) return res.status(404).json({ error: 'Style not found' });
+    logAudit({ action: 'style_updated', details: { styleId: updated._id, changes: setFields }, userId: req.user.id });
     res.json(updated);
   } catch (err) {
     console.error('Error updating style:', err);
@@ -127,6 +130,7 @@ exports.deleteStyle = async (req, res) => {
     const deleted = await Style.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Style not found' });
     await Variant.deleteMany({ style: req.params.id });
+    logAudit({ action: 'style_deleted', details: { styleId: deleted._id, name: deleted.name }, userId: req.user.id });
     res.json({ message: 'Style and its variants deleted' });
   } catch (err) {
     console.error('Error deleting style:', err);

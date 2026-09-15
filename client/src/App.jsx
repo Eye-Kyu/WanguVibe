@@ -6,6 +6,13 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import SalesPage from './pages/admin/SalesPage';
 import StylesPage from './pages/admin/StylesPage';
 import UsersPage from './pages/admin/UsersPage';
+import CustomersPage from './pages/admin/CustomersPage';
+import InventoryPage from './pages/admin/InventoryPage';
+import AuditLogPage from './pages/admin/AuditLogPage';
+import ShiftsPage from './pages/admin/ShiftsPage';
+import GiftCardsPage from './pages/admin/GiftCardsPage';
+import EtimsRetryPage from './pages/admin/EtimsRetryPage';
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 //import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -20,12 +27,18 @@ function App() {
       <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/pos" element={<POSPage />} />
+        <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
 
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="sales" element={<SalesPage />} />
           <Route path="styles" element={<StylesPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="audit" element={<AuditLogPage />} />
+          <Route path="shifts" element={<ShiftsPage />} />
+          <Route path="giftcards" element={<GiftCardsPage />} />
+          <Route path="etims" element={<EtimsRetryPage />} />
           <Route path="users" element={<UsersPage />} />
         </Route>
       </Routes>

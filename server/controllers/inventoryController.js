@@ -1,5 +1,6 @@
 const InventoryLog = require('../models/InventoryLog');
 const Variant = require('../models/Variant');
+const { logAudit } = require('../utils/auditLogger');
 
 exports.restockVariant = async (req, res) => {
     try {
@@ -20,6 +21,7 @@ exports.restockVariant = async (req, res) => {
         });
 
         await log.save();
+        logAudit({ action: 'stock_restocked', details: { variantId, quantity, newStock: variant.stock }, userId });
 
         res.status(200).json({ message: 'Variant restocked', variant, log });
     } catch (err) {

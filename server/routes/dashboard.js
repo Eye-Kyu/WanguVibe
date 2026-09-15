@@ -2,12 +2,17 @@ const express = require('express');
 const router = express.Router();
 const Sale = require('../models/Sale');
 const Variant = require('../models/Variant');
+const { protect } = require('../middleware/authMiddleware');
 
 // % change from prev to current; null when no previous data
 const trendPct = (current, prev) =>
     prev > 0 ? parseFloat(((current - prev) / prev * 100).toFixed(1)) : null;
 
-router.get('/summary', async (req, res) => {
+// Revenue net of refunds — refundedAmount may be absent on sales created
+// before returns existed, hence the $ifNull.
+const NET_AMOUNT = { $subtract: ['$totalAmount', { $ifNull: ['$refundedAmount', 0] }] };
+
+router.get('/summary', protect, async (req, res) => {
     try {
         const range = req.query.range || 'day';
         const now = new Date();
@@ -49,29 +54,29 @@ router.get('/summary', async (req, res) => {
 
             Sale.aggregate([
                 { $match: { createdAt: { $gte: todayStart } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
+                { $group: { _id: null, total: { $sum: NET_AMOUNT }, count: { $sum: 1 } } },
             ]),
             Sale.aggregate([
                 { $match: { createdAt: { $gte: yesterdayStart, $lt: todayStart } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+                { $group: { _id: null, total: { $sum: NET_AMOUNT } } },
             ]),
 
             Sale.aggregate([
                 { $match: { createdAt: { $gte: weekStart } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
+                { $group: { _id: null, total: { $sum: NET_AMOUNT }, count: { $sum: 1 } } },
             ]),
             Sale.aggregate([
                 { $match: { createdAt: { $gte: prevWeekStart, $lt: weekStart } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+                { $group: { _id: null, total: { $sum: NET_AMOUNT } } },
             ]),
 
             Sale.aggregate([
                 { $match: { createdAt: { $gte: monthStart } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
+                { $group: { _id: null, total: { $sum: NET_AMOUNT }, count: { $sum: 1 } } },
             ]),
             Sale.aggregate([
                 { $match: { createdAt: { $gte: prevMonthStart, $lt: monthStart } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+                { $group: { _id: null, total: { $sum: NET_AMOUNT } } },
             ]),
 
             Variant.aggregate([
@@ -84,7 +89,7 @@ router.get('/summary', async (req, res) => {
             Sale.aggregate([
                 { $match: { createdAt: { $gte: rangeStart } } },
                 { $unwind: '$items' },
-                { $group: { _id: '$items.styleName', qty: { $sum: '$items.quantity' } } },
+                { $group: { _id: '$items.styleName', qty: { $sum: { $subtract: ['$items.quantity', { $ifNull: ['$items.returnedQuantity', 0] }] } } } },
                 { $sort: { qty: -1 } },
                 { $limit: 5 },
                 { $project: { name: '$_id', qty: 1, _id: 0 } },
@@ -110,7 +115,7 @@ router.get('/summary', async (req, res) => {
                             month: { $month: '$createdAt' },
                             day:   { $dayOfMonth: '$createdAt' },
                         },
-                        total: { $sum: '$totalAmount' },
+                        total: { $sum: NET_AMOUNT },
                         count: { $sum: 1 },
                     },
                 },
@@ -122,7 +127,7 @@ router.get('/summary', async (req, res) => {
                 {
                     $group: {
                         _id:   '$paymentMethod',
-                        total: { $sum: '$totalAmount' },
+                        total: { $sum: NET_AMOUNT },
                         count: { $sum: 1 },
                     },
                 },

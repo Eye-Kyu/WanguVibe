@@ -41,20 +41,11 @@ const LoginPage = () => {
             <div className="relative z-10 flex items-center justify-center w-full h-full px-4">
 
                 {/* Card */}
-                <div className="w-full rounded-xl max-w-md 
-                    bg-red/10 backdrop-blur-2xl
+                <div className="w-full rounded-3xl max-w-md
+                    bg-purple-950/20 backdrop-blur-2xl
                     border border-white/20 shadow-2xl
                     p-6 sm:p-8 md:p-10
                     animate-fadeIn">
-
-                    {/* Logo */}
-                    <div className="flex justify-center mb-5">
-                        <img
-                            src={businessSettings.logoPath}
-                            alt={`${businessSettings.name} logo`}
-                            className="w-20 sm:w-24 md:w-28 h-auto"
-                        />
-                    </div>
 
                     {/* Title */}
                     <div className="text-center mb-6">
@@ -109,7 +100,7 @@ const LoginPage = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-4 flex items-center text-xs sm:text-sm text-black-300 hover:text-yellow-400 transition"
+                                    className="absolute inset-y-0 right-4 flex items-center text-xs sm:text-sm text-gray-300 hover:text-yellow-400 transition"
                                 >
                                     {showPassword ? "Hide" : "Show"}
                                 </button>

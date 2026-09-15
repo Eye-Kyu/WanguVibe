@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import api from '../api/axiosInstance';
 
 export const AuthContext = createContext();
 
@@ -30,6 +31,10 @@ export const AuthProvider = ({ children }) => {
     }, [user]);
 
     const logout = () => {
+        // Revoke the refresh token server-side so a lingering copy of the
+        // cookie can't be replayed later — fire-and-forget, since local
+        // state must clear immediately regardless of network state.
+        api.post('/auth/logout').catch(() => {});
         setToken('');
         setUser(null);
     };

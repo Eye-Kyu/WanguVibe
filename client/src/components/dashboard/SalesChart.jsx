@@ -8,7 +8,7 @@ const RANGE_TITLE = { day: "Today's Sales", week: 'Weekly Sales', month: 'Monthl
 function CustomTooltip({ active, payload, label }) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-white border border-gray-200 shadow-lg rounded-lg px-4 py-3 text-sm">
+        <div className="bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3 text-sm">
             <p className="text-gray-500 mb-1">{label}</p>
             <p className="font-bold text-indigo-600">KES {Number(payload[0].value).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
             {payload[0].payload.count !== undefined && (

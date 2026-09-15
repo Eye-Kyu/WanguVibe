@@ -1,0 +1,46 @@
+{
+  "pos": {
+    "cart": {
+      "title": "Agizo la Sasa",
+      "clear": "Futa",
+      "emptyTitle": "Kikapu ni tupu",
+      "emptySubtitle": "Gusa bidhaa kuchagua saizi/rangi",
+      "subtotal": "Jumla Ndogo",
+      "discount": "Punguzo ({{pct}}%)",
+      "total": "Jumla",
+      "checkoutEmpty": "Ongeza bidhaa kulipa",
+      "checkout": "Lipa",
+      "removeItem": "Ondoa bidhaa"
+    },
+    "categories": {
+      "all": "Zote"
+    },
+    "payment": {
+      "amountDue": "Kiasi Kinachodaiwa",
+      "orderDiscount": "Punguzo la Agizo (%)",
+      "deductedFromOrder": "−KES {{amount}} imepunguzwa kwenye agizo",
+      "paymentMethod": "Njia ya Malipo",
+      "cash": "Fedha Taslimu",
+      "mpesa": "M-Pesa",
+      "card": "Kadi",
+      "storeCredit": "Salio Duka",
+      "giftCard": "Kadi ya Zawadi",
+      "cashTendered": "Fedha Iliyotolewa",
+      "exact": "Sawasawa",
+      "changeToGive": "Chenji ya kurudisha",
+      "shortBy": "Pungufu kwa",
+      "cancel": "Ghairi",
+      "confirmSale": "Thibitisha Mauzo",
+      "processing": "Inachakata…"
+    },
+    "toast": {
+      "outOfStock": "{{name}} haipo stoo",
+      "onlyInStock": "Zilizobaki ni {{count}} pekee",
+      "itemAdded": "{{name}} imeongezwa",
+      "saleCompleted": "Mauzo yamekamilika!",
+      "saleFailed": "Imeshindwa kukamilisha mauzo",
+      "stylesLoadFailed": "Imeshindwa kupakia bidhaa",
+      "noItemForBarcode": "Hakuna bidhaa yenye msimbo: {{barcode}}"
+    }
+  }
+}

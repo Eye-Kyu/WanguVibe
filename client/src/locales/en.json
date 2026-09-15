@@ -1,0 +1,46 @@
+{
+  "pos": {
+    "cart": {
+      "title": "Current Order",
+      "clear": "Clear",
+      "emptyTitle": "Cart is empty",
+      "emptySubtitle": "Tap a style to pick a size/color",
+      "subtotal": "Subtotal",
+      "discount": "Discount ({{pct}}%)",
+      "total": "Total",
+      "checkoutEmpty": "Add items to checkout",
+      "checkout": "Checkout",
+      "removeItem": "Remove item"
+    },
+    "categories": {
+      "all": "All"
+    },
+    "payment": {
+      "amountDue": "Amount Due",
+      "orderDiscount": "Order Discount (%)",
+      "deductedFromOrder": "−KES {{amount}} deducted from order",
+      "paymentMethod": "Payment Method",
+      "cash": "Cash",
+      "mpesa": "M-Pesa",
+      "card": "Card",
+      "storeCredit": "Store Credit",
+      "giftCard": "Gift Card",
+      "cashTendered": "Cash Tendered",
+      "exact": "Exact",
+      "changeToGive": "Change to give",
+      "shortBy": "Short by",
+      "cancel": "Cancel",
+      "confirmSale": "Confirm Sale",
+      "processing": "Processing…"
+    },
+    "toast": {
+      "outOfStock": "{{name}} is out of stock",
+      "onlyInStock": "Only {{count}} in stock",
+      "itemAdded": "{{name}} added",
+      "saleCompleted": "Sale completed!",
+      "saleFailed": "Failed to complete sale",
+      "stylesLoadFailed": "Failed to load styles",
+      "noItemForBarcode": "No item found for barcode: {{barcode}}"
+    }
+  }
+}

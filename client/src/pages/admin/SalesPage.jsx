@@ -3,6 +3,7 @@ import api from "../../api/axiosInstance";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
+import GradientStatCard from "../../components/dashboard/GradientStatCard";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -36,27 +37,67 @@ function PaymentBadge({ method }) {
     );
 }
 
+const STATUS_LABELS = { completed: "Completed", partially_returned: "Partially Returned", returned: "Returned" };
+const STATUS_STYLES = {
+    completed: "bg-gray-100 text-gray-600",
+    partially_returned: "bg-amber-100 text-amber-700",
+    returned: "bg-red-100 text-red-700",
+};
+
+function StatusBadge({ status }) {
+    if (!status || status === "completed") return null;
+    return (
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] || "bg-gray-100 text-gray-600"}`}>
+            {STATUS_LABELS[status] || status}
+        </span>
+    );
+}
+
 // A sale line item's display name — "Style Name (Size/Color)" — built from
 // fields denormalized onto the sale at checkout time (see Sale model), so it
 // stays correct even if the style/variant is edited or deleted afterward.
 const lineItemName = (item) => `${item.styleName || "Unknown item"} (${item.size}/${item.color})`;
 
-function StatCard({ label, value, sub }) {
-    return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-            {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
-        </div>
-    );
-}
-
 // ─── Sale Detail Modal ───────────────────────────────────────────────────────
 
-function SaleModal({ sale, onClose }) {
+const REFUND_DESTINATIONS = [
+    { value: "cash", label: "Cash" },
+    { value: "original_payment", label: "Original payment method" },
+    { value: "store_credit", label: "Store credit" },
+];
+
+function SaleModal({ sale, onClose, onReturned }) {
+    const [returnQtys, setReturnQtys] = useState({});
+    const [destination, setDestination] = useState("cash");
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => { setReturnQtys({}); setDestination("cash"); }, [sale?._id]);
+
     if (!sale) return null;
 
     const hasDiscounts = sale.items.some((i) => (i.discount ?? 0) > 0);
+    const isFullyReturned = sale.status === "returned";
+
+    const remainingFor = (item) => item.quantity - (item.returnedQuantity || 0);
+
+    const itemsToReturn = Object.entries(returnQtys)
+        .filter(([, qty]) => qty > 0)
+        .map(([variantId, qty]) => ({ variant: variantId, quantity: qty }));
+
+    const handleProcessReturn = async () => {
+        if (itemsToReturn.length === 0) return;
+        setSubmitting(true);
+        try {
+            const res = await api.post(`/sales/${sale._id}/return`, { items: itemsToReturn, destination });
+            toast.success(`Refunded KES ${fmt(res.data.refundAmount)}`);
+            setReturnQtys({});
+            onReturned(res.data.sale);
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Failed to process return");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <div
@@ -70,7 +111,10 @@ function SaleModal({ sale, onClose }) {
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0">
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900">Sale Receipt</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-gray-900">Sale Receipt</h2>
+                            <StatusBadge status={sale.status} />
+                        </div>
                         <p className="text-xs font-mono text-gray-400 mt-0.5">
                             #{sale._id.toUpperCase()}
                         </p>
@@ -120,6 +164,7 @@ function SaleModal({ sale, onClose }) {
                                     <th className="pb-2 text-right">Disc.</th>
                                 )}
                                 <th className="pb-2 text-right">Subtotal</th>
+                                <th className="pb-2 text-right">Return</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -128,10 +173,18 @@ function SaleModal({ sale, onClose }) {
                                 const price = item.unitPrice ?? 0;
                                 const disc  = item.discount ?? 0;
                                 const subtotal = price * item.quantity * (1 - disc / 100);
+                                const remaining = remainingFor(item);
 
                                 return (
                                     <tr key={idx}>
-                                        <td className="py-2.5 font-medium text-gray-800">{name}</td>
+                                        <td className="py-2.5 font-medium text-gray-800">
+                                            {name}
+                                            {item.returnedQuantity > 0 && (
+                                                <span className="block text-[11px] font-normal text-red-500">
+                                                    {item.returnedQuantity} returned
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="py-2.5 text-right text-gray-500">{item.quantity}</td>
                                         <td className="py-2.5 text-right text-gray-500">
                                             KES {fmt(price)}
@@ -143,6 +196,25 @@ function SaleModal({ sale, onClose }) {
                                         )}
                                         <td className="py-2.5 text-right font-semibold text-gray-900">
                                             KES {fmt(subtotal)}
+                                        </td>
+                                        <td className="py-2.5 text-right">
+                                            {remaining > 0 ? (
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={remaining}
+                                                    placeholder="0"
+                                                    value={returnQtys[item.variant?._id] || ""}
+                                                    onChange={(e) => {
+                                                        const raw = parseInt(e.target.value, 10);
+                                                        const qty = Number.isNaN(raw) ? 0 : Math.max(0, Math.min(remaining, raw));
+                                                        setReturnQtys((q) => ({ ...q, [item.variant?._id]: qty }));
+                                                    }}
+                                                    className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-2 focus:ring-red-200"
+                                                />
+                                            ) : (
+                                                <span className="text-xs text-gray-400">—</span>
+                                            )}
                                         </td>
                                     </tr>
                                 );
@@ -163,16 +235,59 @@ function SaleModal({ sale, onClose }) {
                         <span>Total</span>
                         <span>KES {fmt(sale.totalAmount)}</span>
                     </div>
+                    {sale.refundedAmount > 0 && (
+                        <div className="flex justify-between text-sm text-red-600 pb-3">
+                            <span>Refunded</span>
+                            <span>−KES {fmt(sale.refundedAmount)}</span>
+                        </div>
+                    )}
                 </div>
 
+                {/* Refund destination — only shown once at least one return qty is entered */}
+                {!isFullyReturned && itemsToReturn.length > 0 && (
+                    <div className="px-6 pb-3 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Refund to</label>
+                        <div className="flex gap-2">
+                            {REFUND_DESTINATIONS.map((d) => {
+                                const disabled = d.value === "store_credit" && !sale.customer;
+                                return (
+                                    <button
+                                        key={d.value}
+                                        type="button"
+                                        disabled={disabled}
+                                        title={disabled ? "This sale has no customer on file" : ""}
+                                        onClick={() => setDestination(d.value)}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                                            destination === d.value
+                                                ? "bg-red-600 text-white border-red-600"
+                                                : "text-gray-600 border-gray-200 hover:border-red-300"
+                                        } disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-200`}
+                                    >
+                                        {d.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 {/* Footer */}
-                <div className="px-6 pb-5 shrink-0">
+                <div className="px-6 pb-5 shrink-0 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="w-full py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition"
+                        className="flex-1 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition"
                     >
                         Close
                     </button>
+                    {!isFullyReturned && itemsToReturn.length > 0 && (
+                        <button
+                            onClick={handleProcessReturn}
+                            disabled={submitting || (destination === "store_credit" && !sale.customer)}
+                            className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {submitting ? "Processing…" : "Process Return"}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -259,7 +374,7 @@ const SalesPage = () => {
 
     // ── Summary ───────────────────────────────────────────────────────────
     const summary = useMemo(() => {
-        const total = filteredSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+        const total = filteredSales.reduce((sum, s) => sum + (s.totalAmount || 0) - (s.refundedAmount || 0), 0);
         const count = filteredSales.length;
         return { total, count, average: count > 0 ? total / count : 0 };
     }, [filteredSales]);
@@ -305,7 +420,7 @@ const SalesPage = () => {
     if (loading) {
         return (
             <div className="space-y-4 animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-40" />
+                <div className="h-8 bg-gray-200 rounded-lg w-40" />
                 <div className="grid grid-cols-3 gap-4">
                     {[0, 1, 2].map((i) => <div key={i} className="h-24 bg-gray-200 rounded-xl" />)}
                 </div>
@@ -329,7 +444,7 @@ const SalesPage = () => {
                 </div>
                 <button
                     onClick={fetchData}
-                    className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                    className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition"
                 >
                     Refresh
                 </button>
@@ -337,24 +452,27 @@ const SalesPage = () => {
 
             {/* ── Summary cards ────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard
+                <GradientStatCard
+                    variant="indigo"
                     label="Total Revenue"
                     value={`KES ${fmt(summary.total)}`}
                     sub={hasFilters ? "Filtered results" : "All time"}
                 />
-                <StatCard
+                <GradientStatCard
+                    variant="violet"
                     label="Transactions"
                     value={summary.count.toLocaleString()}
                     sub={hasFilters ? `of ${sales.length.toLocaleString()} total` : undefined}
                 />
-                <StatCard
+                <GradientStatCard
+                    variant="emerald"
                     label="Avg Order Value"
                     value={`KES ${fmt(summary.average)}`}
                 />
             </div>
 
             {/* ── Filters ──────────────────────────────────────────────── */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex flex-wrap gap-3 items-end">
                     <div className="flex-1 min-w-[180px]">
                         <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -365,7 +483,7 @@ const SalesPage = () => {
                             placeholder="Item name, sale ID, cashier…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         />
                     </div>
 
@@ -376,7 +494,7 @@ const SalesPage = () => {
                         <select
                             value={paymentFilter}
                             onChange={(e) => setPaymentFilter(e.target.value)}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         >
                             <option value="">All Methods</option>
                             <option value="cash">Cash</option>
@@ -391,7 +509,7 @@ const SalesPage = () => {
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         />
                     </div>
 
@@ -401,7 +519,7 @@ const SalesPage = () => {
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         />
                     </div>
 
@@ -410,7 +528,7 @@ const SalesPage = () => {
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         >
                             {SORT_OPTIONS.map((o) => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -422,14 +540,14 @@ const SalesPage = () => {
                         {hasFilters && (
                             <button
                                 onClick={clearFilters}
-                                className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition"
+                                className="px-3 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
                             >
                                 Clear filters
                             </button>
                         )}
                         <button
                             onClick={handleExport}
-                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition"
                         >
                             Export Excel
                         </button>
@@ -438,7 +556,7 @@ const SalesPage = () => {
             </div>
 
             {/* ── Table ────────────────────────────────────────────────── */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -479,7 +597,7 @@ const SalesPage = () => {
                                             onClick={() => setSelectedSale(sale)}
                                         >
                                             <td className="px-5 py-3">
-                                                <span className="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                                                <span className="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">
                                                     #{sale._id.slice(-6).toUpperCase()}
                                                 </span>
                                             </td>
@@ -498,7 +616,10 @@ const SalesPage = () => {
                                                 )}
                                             </td>
                                             <td className="px-5 py-3">
-                                                <PaymentBadge method={sale.paymentMethod} />
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    <PaymentBadge method={sale.paymentMethod} />
+                                                    <StatusBadge status={sale.status} />
+                                                </div>
                                             </td>
                                             <td className="px-5 py-3 text-gray-600">
                                                 {sale.cashier?.name || "—"}
@@ -540,14 +661,14 @@ const SalesPage = () => {
                             <button
                                 onClick={() => setPage(1)}
                                 disabled={page === 1}
-                                className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
+                                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
                             >
                                 «
                             </button>
                             <button
                                 onClick={() => setPage((p) => Math.max(p - 1, 1))}
                                 disabled={page === 1}
-                                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
+                                className="px-3 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
                             >
                                 Prev
                             </button>
@@ -557,14 +678,14 @@ const SalesPage = () => {
                             <button
                                 onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
                                 disabled={page === totalPages}
-                                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
+                                className="px-3 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
                             >
                                 Next
                             </button>
                             <button
                                 onClick={() => setPage(totalPages)}
                                 disabled={page === totalPages}
-                                className="px-2 py-1 text-xs rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
+                                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
                             >
                                 »
                             </button>
@@ -574,7 +695,14 @@ const SalesPage = () => {
             </div>
 
             {/* ── Sale detail modal ────────────────────────────────────── */}
-            <SaleModal sale={selectedSale} onClose={() => setSelectedSale(null)} />
+            <SaleModal
+                sale={selectedSale}
+                onClose={() => setSelectedSale(null)}
+                onReturned={(updatedSale) => {
+                    setSelectedSale(updatedSale);
+                    setSales((list) => list.map((s) => (s._id === updatedSale._id ? updatedSale : s)));
+                }}
+            />
         </div>
     );
 };

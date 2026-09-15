@@ -17,11 +17,11 @@ function StockBadge({ stock }) {
 function ConfirmDialog({ message, onConfirm, onCancel }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-xl shadow-xl p-6 w-80 space-y-4">
+            <div className="bg-white rounded-2xl shadow-xl p-6 w-80 space-y-4">
                 <p className="text-gray-800 text-sm">{message}</p>
                 <div className="flex gap-3 justify-end">
-                    <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button onClick={onConfirm} className="px-4 py-2 rounded-lg text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
+                    <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button onClick={onConfirm} className="px-4 py-2 rounded-xl text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
                 </div>
             </div>
         </div>
@@ -38,7 +38,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{initial?._id ? 'Edit Style' : 'Add Style'}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
@@ -48,7 +48,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                     <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Style Name *</label>
                         <input
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                             placeholder="e.g. Floral Wrap Dress"
                             value={form.name}
                             onChange={e => set('name', e.target.value)}
@@ -59,7 +59,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Style Code</label>
                             <input
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 placeholder="e.g. DRS-0042"
                                 value={form.styleCode}
                                 onChange={e => set('styleCode', e.target.value)}
@@ -68,7 +68,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Brand</label>
                             <input
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 value={form.brand}
                                 onChange={e => set('brand', e.target.value)}
                             />
@@ -78,7 +78,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                     <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
                         <textarea
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                             rows={2}
                             value={form.description}
                             onChange={e => set('description', e.target.value)}
@@ -90,7 +90,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                             <label className="block text-xs font-medium text-gray-600 mb-1">Base Price (KES) *</label>
                             <input
                                 type="number" min="0" step="0.01"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 value={form.basePrice}
                                 onChange={e => set('basePrice', e.target.value)}
                             />
@@ -99,7 +99,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                             <label className="block text-xs font-medium text-gray-600 mb-1">Cost Price (KES)</label>
                             <input
                                 type="number" min="0" step="0.01"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 value={form.costPrice}
                                 onChange={e => set('costPrice', e.target.value)}
                             />
@@ -110,7 +110,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
                             <select
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 value={form.category}
                                 onChange={e => set('category', e.target.value)}
                             >
@@ -121,7 +121,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Season</label>
                             <input
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                 placeholder="e.g. SS26"
                                 value={form.season}
                                 onChange={e => set('season', e.target.value)}
@@ -132,7 +132,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                     <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Material</label>
                         <input
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                             placeholder="e.g. 100% Cotton"
                             value={form.material}
                             onChange={e => set('material', e.target.value)}
@@ -144,7 +144,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                         <input
                             type="file"
                             accept="image/*"
-                            className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                            className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                             onChange={e => set('image', e.target.files[0] || null)}
                         />
                     </div>
@@ -153,17 +153,17 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                         <img
                             src={form.image instanceof File ? URL.createObjectURL(form.image) : (initial?.images?.[0] || '')}
                             alt="Preview"
-                            className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                            className="w-20 h-20 object-cover rounded-xl border border-gray-200"
                         />
                     )}
                 </div>
 
                 <div className="flex gap-3 px-5 pb-5 justify-end">
-                    <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
                     <button
                         onClick={() => onSave(form)}
                         disabled={!valid || submitting}
-                        className="px-5 py-2 rounded-lg text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-5 py-2 rounded-xl text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {submitting ? 'Saving…' : initial?._id ? 'Update Style' : 'Add Style'}
                     </button>
@@ -244,7 +244,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
                     <div>
                         <h2 className="font-semibold text-gray-800">Sizes &amp; Colors — {style.name}</h2>
@@ -274,12 +274,12 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                                     <tr key={v._id}>
                                         {isEditing ? (
                                             <>
-                                                <td className="py-2 pr-2"><input className="w-16 border border-gray-200 rounded px-1.5 py-1 text-xs" value={row.size} onChange={e => setEditRow({ ...row, size: e.target.value })} /></td>
-                                                <td className="py-2 pr-2"><input className="w-20 border border-gray-200 rounded px-1.5 py-1 text-xs" value={row.color} onChange={e => setEditRow({ ...row, color: e.target.value })} /></td>
-                                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded px-1.5 py-1 text-xs font-mono" value={row.sku} onChange={e => setEditRow({ ...row, sku: e.target.value })} /></td>
-                                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded px-1.5 py-1 text-xs font-mono" value={row.barcode || ''} onChange={e => setEditRow({ ...row, barcode: e.target.value })} /></td>
-                                                <td className="py-2 pr-2"><input type="number" className="w-16 border border-gray-200 rounded px-1.5 py-1 text-xs text-right" value={row.stock} onChange={e => setEditRow({ ...row, stock: e.target.value })} /></td>
-                                                <td className="py-2 pr-2"><input type="number" className="w-20 border border-gray-200 rounded px-1.5 py-1 text-xs text-right" placeholder="—" value={row.priceOverride ?? ''} onChange={e => setEditRow({ ...row, priceOverride: e.target.value })} /></td>
+                                                <td className="py-2 pr-2"><input className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs" value={row.size} onChange={e => setEditRow({ ...row, size: e.target.value })} /></td>
+                                                <td className="py-2 pr-2"><input className="w-20 border border-gray-200 rounded-lg px-1.5 py-1 text-xs" value={row.color} onChange={e => setEditRow({ ...row, color: e.target.value })} /></td>
+                                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded-lg px-1.5 py-1 text-xs font-mono" value={row.sku} onChange={e => setEditRow({ ...row, sku: e.target.value })} /></td>
+                                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded-lg px-1.5 py-1 text-xs font-mono" value={row.barcode || ''} onChange={e => setEditRow({ ...row, barcode: e.target.value })} /></td>
+                                                <td className="py-2 pr-2"><input type="number" className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right" value={row.stock} onChange={e => setEditRow({ ...row, stock: e.target.value })} /></td>
+                                                <td className="py-2 pr-2"><input type="number" className="w-20 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right" placeholder="—" value={row.priceOverride ?? ''} onChange={e => setEditRow({ ...row, priceOverride: e.target.value })} /></td>
                                                 <td className="py-2 text-right whitespace-nowrap">
                                                     <button disabled={busy} onClick={() => saveEdit(v._id)} className="text-xs font-semibold text-green-600 hover:text-green-800 mr-2">Save</button>
                                                     <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
@@ -305,12 +305,12 @@ function VariantManagerModal({ style, onClose, onChanged }) {
 
                             {/* New row */}
                             <tr className="bg-indigo-50/30">
-                                <td className="py-2 pr-2"><input className="w-16 border border-gray-200 rounded px-1.5 py-1 text-xs" placeholder="M" value={newRow.size} onChange={e => setNewRow({ ...newRow, size: e.target.value })} /></td>
-                                <td className="py-2 pr-2"><input className="w-20 border border-gray-200 rounded px-1.5 py-1 text-xs" placeholder="Red" value={newRow.color} onChange={e => setNewRow({ ...newRow, color: e.target.value })} /></td>
-                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded px-1.5 py-1 text-xs font-mono" placeholder="SKU" value={newRow.sku} onChange={e => setNewRow({ ...newRow, sku: e.target.value })} /></td>
-                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded px-1.5 py-1 text-xs font-mono" placeholder="optional" value={newRow.barcode} onChange={e => setNewRow({ ...newRow, barcode: e.target.value })} /></td>
-                                <td className="py-2 pr-2"><input type="number" className="w-16 border border-gray-200 rounded px-1.5 py-1 text-xs text-right" placeholder="0" value={newRow.stock} onChange={e => setNewRow({ ...newRow, stock: e.target.value })} /></td>
-                                <td className="py-2 pr-2"><input type="number" className="w-20 border border-gray-200 rounded px-1.5 py-1 text-xs text-right" placeholder="—" value={newRow.priceOverride} onChange={e => setNewRow({ ...newRow, priceOverride: e.target.value })} /></td>
+                                <td className="py-2 pr-2"><input className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs" placeholder="M" value={newRow.size} onChange={e => setNewRow({ ...newRow, size: e.target.value })} /></td>
+                                <td className="py-2 pr-2"><input className="w-20 border border-gray-200 rounded-lg px-1.5 py-1 text-xs" placeholder="Red" value={newRow.color} onChange={e => setNewRow({ ...newRow, color: e.target.value })} /></td>
+                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded-lg px-1.5 py-1 text-xs font-mono" placeholder="SKU" value={newRow.sku} onChange={e => setNewRow({ ...newRow, sku: e.target.value })} /></td>
+                                <td className="py-2 pr-2"><input className="w-24 border border-gray-200 rounded-lg px-1.5 py-1 text-xs font-mono" placeholder="optional" value={newRow.barcode} onChange={e => setNewRow({ ...newRow, barcode: e.target.value })} /></td>
+                                <td className="py-2 pr-2"><input type="number" className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right" placeholder="0" value={newRow.stock} onChange={e => setNewRow({ ...newRow, stock: e.target.value })} /></td>
+                                <td className="py-2 pr-2"><input type="number" className="w-20 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right" placeholder="—" value={newRow.priceOverride} onChange={e => setNewRow({ ...newRow, priceOverride: e.target.value })} /></td>
                                 <td className="py-2 text-right">
                                     <button disabled={busy} onClick={addVariant} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">+ Add</button>
                                 </td>
@@ -323,7 +323,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                 </div>
 
                 <div className="px-5 pb-5 flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-white bg-gray-800 hover:bg-gray-900 transition-colors">Done</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm text-white bg-gray-800 hover:bg-gray-900 transition-colors">Done</button>
                 </div>
             </div>
         </div>
@@ -456,7 +456,7 @@ export default function ProductsPage() {
                 </div>
                 <button
                     onClick={() => setModalStyle({})}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
                 >
                     <span className="text-lg leading-none">+</span> Add Style
                 </button>
@@ -464,14 +464,14 @@ export default function ProductsPage() {
 
             <div className="flex flex-wrap gap-3">
                 <input
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     placeholder="Search name, code or brand…"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
 
                 <select
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     value={sortBy}
                     onChange={e => setSortBy(e.target.value)}
                 >
@@ -505,7 +505,7 @@ export default function ProductsPage() {
             {loading ? (
                 <div className="space-y-2">
                     {[...Array(6)].map((_, i) => (
-                        <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />
+                        <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
                     ))}
                 </div>
             ) : filtered.length === 0 ? (
@@ -514,7 +514,7 @@ export default function ProductsPage() {
                     <p className="text-sm">No styles found</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
@@ -538,13 +538,13 @@ export default function ProductsPage() {
                                     >
                                         <td className="px-4 py-3">
                                             {s.images?.[0]
-                                                ? <img src={s.images[0]} alt={s.name} className="w-10 h-10 object-cover rounded-lg" />
-                                                : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-lg">?</div>
+                                                ? <img src={s.images[0]} alt={s.name} className="w-10 h-10 object-cover rounded-xl" />
+                                                : <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-300 text-lg">?</div>
                                             }
                                         </td>
                                         <td className="px-4 py-3 font-medium text-gray-800">{s.name}</td>
-                                        <td className="px-4 py-3 font-mono text-gray-500 text-xs">{s.styleCode || <span className="text-gray-300">—</span>}</td>
-                                        <td className="px-4 py-3 text-gray-500">{s.category || <span className="text-gray-300">—</span>}</td>
+                                        <td className="px-4 py-3 font-mono text-gray-500 text-xs">{s.styleCode || <span className="text-gray-400">—</span>}</td>
+                                        <td className="px-4 py-3 text-gray-500">{s.category || <span className="text-gray-400">—</span>}</td>
                                         <td className="px-4 py-3 text-right text-gray-800">KES {Number(s.basePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-4 py-3 text-gray-500">{(s.variants || []).length}</td>
                                         <td className="px-4 py-3"><StockBadge stock={stock} /></td>
@@ -552,19 +552,19 @@ export default function ProductsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => setVariantStyle(s)}
-                                                    className="px-3 py-1 rounded-lg text-xs font-medium text-purple-600 border border-purple-200 hover:bg-purple-50 transition-colors"
+                                                    className="px-3 py-1 rounded-xl text-xs font-medium text-purple-600 border border-purple-200 hover:bg-purple-50 transition-colors"
                                                 >
                                                     Sizes/Colors
                                                 </button>
                                                 <button
                                                     onClick={() => setModalStyle(s)}
-                                                    className="px-3 py-1 rounded-lg text-xs font-medium text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                                                    className="px-3 py-1 rounded-xl text-xs font-medium text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
                                                 >
                                                     Edit
                                                 </button>
                                                 <button
                                                     onClick={() => setConfirmId(s._id)}
-                                                    className="px-3 py-1 rounded-lg text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+                                                    className="px-3 py-1 rounded-xl text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
                                                 >
                                                     Delete
                                                 </button>
@@ -582,10 +582,10 @@ export default function ProductsPage() {
                 <div className="flex items-center justify-between text-sm text-gray-500">
                     <span>Page {currentPage} of {totalPages} · {filtered.length} results</span>
                     <div className="flex gap-1">
-                        <button onClick={() => setPage(1)} disabled={currentPage === 1} className="px-2 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50">«</button>
-                        <button onClick={() => setPage(p => p - 1)} disabled={currentPage === 1} className="px-2 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50">‹</button>
-                        <button onClick={() => setPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50">›</button>
-                        <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="px-2 py-1 rounded border border-gray-200 disabled:opacity-40 hover:bg-gray-50">»</button>
+                        <button onClick={() => setPage(1)} disabled={currentPage === 1} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">«</button>
+                        <button onClick={() => setPage(p => p - 1)} disabled={currentPage === 1} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">‹</button>
+                        <button onClick={() => setPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">›</button>
+                        <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">»</button>
                     </div>
                 </div>
             )}

@@ -1,4 +1,5 @@
 const Customer = require('../models/Customer');
+const StoreCreditLedger = require('../models/StoreCreditLedger');
 
 exports.getAllCustomers = async (req, res) => {
   try {
@@ -58,6 +59,26 @@ exports.updateCustomer = async (req, res) => {
   } catch (err) {
     console.error('Error updating customer:', err);
     res.status(400).json({ error: 'Invalid update data' });
+  }
+};
+
+// GET /api/customers/:id/store-credit-ledger — the customer's full store
+// credit history (small enough per-customer that pagination isn't warranted,
+// unlike audit logs/shifts which are unbounded across the whole system).
+exports.getStoreCreditLedger = async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id, 'name storeCreditBalance');
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const entries = await StoreCreditLedger.find({ customer: req.params.id })
+      .sort({ createdAt: -1 })
+      .populate('createdBy', 'name')
+      .lean();
+
+    res.json({ balance: customer.storeCreditBalance, entries });
+  } catch (err) {
+    console.error('Error fetching store credit ledger:', err);
+    res.status(500).json({ error: 'Server error fetching store credit ledger' });
   }
 };
 

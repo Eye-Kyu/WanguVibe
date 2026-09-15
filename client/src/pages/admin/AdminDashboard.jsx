@@ -5,6 +5,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import SalesChart from '../../components/dashboard/SalesChart';
 import PieChartBestsellers from '../../components/dashboard/PieChartBestSellers';
 import BarChartStockLevels from '../../components/dashboard/BarChartStockLevels';
+import KpiCard from '../../components/dashboard/GradientStatCard';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -14,31 +15,6 @@ const fmt = (n) =>
 const PAYMENT_COLORS = { Cash: '#2563eb', 'M-Pesa': '#16a34a', Card: '#9333ea' };
 
 const RANGE_LABELS = { day: 'Today', week: 'This Week', month: 'This Month' };
-
-// ─── KPI Card ───────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, trend, trendLabel, sub }) {
-    const hasTrend = trend !== null && trend !== undefined;
-    return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-1">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
-            <p className="text-2xl font-bold text-gray-900 truncate">{value}</p>
-            <div className="flex items-center gap-2 min-h-[20px]">
-                {hasTrend && (
-                    <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
-                    }`}>
-                        {trend >= 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
-                    </span>
-                )}
-                {trendLabel && hasTrend && (
-                    <span className="text-xs text-gray-400">{trendLabel}</span>
-                )}
-            </div>
-            {sub && <p className="text-xs text-gray-400">{sub}</p>}
-        </div>
-    );
-}
 
 // ─── Stat Pill (inside range analysis row) ──────────────────────────────────
 
@@ -100,7 +76,7 @@ const AdminDashboard = () => {
     if (loading && !data) {
         return (
             <div className="space-y-6 animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-48" />
+                <div className="h-8 bg-gray-200 rounded-lg w-48" />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[...Array(4)].map((_, i) => (
                         <div key={i} className="h-28 bg-gray-200 rounded-xl" />
@@ -129,7 +105,7 @@ const AdminDashboard = () => {
                 <button
                     onClick={fetchDashboard}
                     disabled={loading}
-                    className="self-start sm:self-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
+                    className="self-start sm:self-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition"
                 >
                     {loading ? 'Refreshing…' : 'Refresh'}
                 </button>
@@ -138,6 +114,7 @@ const AdminDashboard = () => {
             {/* ── KPI Cards ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard
+                    variant="indigo"
                     label="Today's Revenue"
                     value={`KES ${fmt(data?.todaySales)}`}
                     trend={data?.todayTrend}
@@ -145,6 +122,7 @@ const AdminDashboard = () => {
                     sub={`${data?.todayTransactions ?? 0} transaction${data?.todayTransactions !== 1 ? 's' : ''}`}
                 />
                 <KpiCard
+                    variant="violet"
                     label="This Week's Revenue"
                     value={`KES ${fmt(data?.weekSales)}`}
                     trend={data?.weekTrend}
@@ -152,6 +130,7 @@ const AdminDashboard = () => {
                     sub={`${data?.weekTransactions ?? 0} transaction${data?.weekTransactions !== 1 ? 's' : ''}`}
                 />
                 <KpiCard
+                    variant="emerald"
                     label="Total Stock"
                     value={`${(data?.totalStock ?? 0).toLocaleString()} units`}
                     sub={
@@ -161,6 +140,7 @@ const AdminDashboard = () => {
                     }
                 />
                 <KpiCard
+                    variant="amber"
                     label="Best Seller"
                     value={data?.bestSeller || '—'}
                     sub={data?.bestSeller ? `Top style — ${RANGE_LABELS[range]}` : 'No sales this period'}
@@ -168,12 +148,12 @@ const AdminDashboard = () => {
             </div>
 
             {/* ── Range Analysis ────────────────────────────────────────── */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm">
                 {/* Controls row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
                     <h2 className="font-semibold text-gray-800">Sales Overview</h2>
                     <div className="flex items-center gap-2">
-                        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                        <div className="flex rounded-xl border border-gray-200 overflow-hidden text-sm">
                             {Object.entries(RANGE_LABELS).map(([key, label]) => (
                                 <button
                                     key={key}
@@ -190,7 +170,7 @@ const AdminDashboard = () => {
                         </div>
                         <button
                             onClick={exportCSV}
-                            className="px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition"
+                            className="px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
                         >
                             Export CSV
                         </button>
@@ -222,7 +202,7 @@ const AdminDashboard = () => {
                 <PieChartBestsellers data={data?.topProducts ?? []} />
 
                 {/* Payment Methods Donut */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm p-5">
                     <h2 className="font-semibold text-gray-800 mb-1">Payment Methods</h2>
                     <p className="text-xs text-gray-400 mb-4">{RANGE_LABELS[range]}</p>
                     {!data?.paymentBreakdown?.length ? (
@@ -284,7 +264,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Recent Sales table */}
-                <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="lg:col-span-2 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-100">
                         <h2 className="font-semibold text-gray-800">Recent Sales</h2>
                         <p className="text-xs text-gray-400 mt-0.5">
@@ -343,7 +323,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Low Stock Alerts */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                         <h2 className="font-semibold text-gray-800">Low Stock Alerts</h2>
                         {data?.lowStockItems?.length > 0 && (

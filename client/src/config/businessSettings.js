@@ -2,7 +2,7 @@
 // business (as we just did from the mini-mart version) is a one-file edit
 // instead of hunting through JSX for hardcoded strings.
 const businessSettings = {
-  name: 'Your Boutique',
+  name: 'Wanguvibe',
   tagline: 'Point of Sale',
   logoPath: '/Login/logo.webp', // replace with your own logo at this path, or update the path
   address: 'Nairobi, Kenya',

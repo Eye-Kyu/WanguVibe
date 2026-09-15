@@ -1,5 +1,6 @@
 const Variant = require('../models/Variant');
 const Style = require('../models/Style');
+const { logAudit } = require('../utils/auditLogger');
 
 // Add a variant to an existing style (the admin "add a size/color" action)
 exports.createVariant = async (req, res) => {
@@ -19,6 +20,7 @@ exports.createVariant = async (req, res) => {
       reorderThreshold: reorderThreshold ?? 2,
     });
     await variant.save();
+    logAudit({ action: 'variant_created', details: { variantId: variant._id, styleId: style._id, size, color, sku }, userId: req.user.id });
     res.status(201).json(variant);
   } catch (err) {
     console.error('Error creating variant:', err);
@@ -57,6 +59,7 @@ exports.updateVariant = async (req, res) => {
 
     const updated = await Variant.findByIdAndUpdate(req.params.id, updateOp, { new: true });
     if (!updated) return res.status(404).json({ error: 'Variant not found' });
+    logAudit({ action: 'variant_updated', details: { variantId: updated._id, changes: setFields }, userId: req.user.id });
     res.json(updated);
   } catch (err) {
     console.error('Error updating variant:', err);
@@ -71,6 +74,7 @@ exports.deleteVariant = async (req, res) => {
   try {
     const deleted = await Variant.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Variant not found' });
+    logAudit({ action: 'variant_deleted', details: { variantId: deleted._id, sku: deleted.sku }, userId: req.user.id });
     res.json({ message: 'Variant deleted' });
   } catch (err) {
     console.error('Error deleting variant:', err);
