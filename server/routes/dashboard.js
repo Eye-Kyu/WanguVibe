@@ -1,4 +1,5 @@
 const express = require('express');
+const { reportError } = require('../utils/reportError');
 const router = express.Router();
 const Sale = require('../models/Sale');
 const Variant = require('../models/Variant');
@@ -210,7 +211,7 @@ router.get('/summary', protect, async (req, res) => {
         });
 
     } catch (err) {
-        console.error('Dashboard Error:', err);
+        reportError(req, err, 'Dashboard summary failed');
         return res.status(500).json({ error: 'Dashboard summary failed' });
     }
 });

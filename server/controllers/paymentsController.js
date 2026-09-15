@@ -1,4 +1,5 @@
 const PendingPayment = require('../models/PendingPayment');
+const { reportError } = require('../utils/reportError');
 const { initiateStkPush } = require('../services/mpesa');
 const { finalizeSale } = require('./salesController');
 const { logAudit } = require('../utils/auditLogger');
@@ -48,7 +49,7 @@ exports.initiateMpesaPayment = async (req, res) => {
 
     res.status(201).json({ pendingPaymentId: pending._id, checkoutRequestId: pending.checkoutRequestId });
   } catch (err) {
-    console.error('Error initiating M-Pesa payment:', err);
+    reportError(req, err, 'Error initiating M-Pesa payment');
     res.status(400).json({ error: err.message || 'Failed to initiate M-Pesa payment' });
   }
 };
@@ -67,7 +68,7 @@ exports.getMpesaStatus = async (req, res) => {
 
     res.json({ status: pending.status, saleId: pending.saleId, resultMessage: pending.resultMessage });
   } catch (err) {
-    console.error('Error fetching M-Pesa status:', err);
+    reportError(req, err, 'Error fetching M-Pesa status');
     res.status(500).json({ error: 'Server error fetching payment status' });
   }
 };
@@ -120,12 +121,12 @@ exports.mpesaCallback = async (req, res) => {
       pending.status = 'failed';
       pending.resultMessage = `Payment received but sale could not be completed: ${finalizeErr.message}`;
       await pending.save();
-      console.error('M-Pesa payment confirmed but finalizeSale failed:', finalizeErr);
+      reportError(req, finalizeErr, 'M-Pesa payment confirmed but finalizeSale failed');
     }
 
     res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
   } catch (err) {
-    console.error('Error handling M-Pesa callback:', err);
+    reportError(req, err, 'Error handling M-Pesa callback');
     res.status(200).json({ ResultCode: 1, ResultDesc: 'Internal error' });
   }
 };

@@ -1,4 +1,5 @@
 const express = require('express');
+const { reportError } = require('../utils/reportError');
 const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
@@ -33,7 +34,7 @@ router.post('/create-user', protect, adminOnly, async (req, res) => {
 
     res.status(201).json({ message: 'User created successfully', user: { name, username, role } });
   } catch (err) {
-    console.error(err);
+    reportError(req, err, 'Error creating user');
     res.status(500).json({ message: 'Server error' });
   }
 });

@@ -1,4 +1,5 @@
 const Style = require('../models/Style');
+const { reportError } = require('../utils/reportError');
 const Variant = require('../models/Variant');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -33,7 +34,7 @@ exports.getAllStyles = async (req, res) => {
     const result = styles.map(s => ({ ...s, variants: variantsByStyle[s._id.toString()] || [] }));
     res.json(result);
   } catch (err) {
-    console.error('Error fetching styles:', err);
+    reportError(req, err, 'Error fetching styles');
     res.status(500).json({ error: 'Server error fetching styles' });
   }
 };
@@ -45,7 +46,7 @@ exports.getStyleById = async (req, res) => {
     const variants = await Variant.find({ style: style._id }).lean();
     res.json({ ...style, variants });
   } catch (err) {
-    console.error('Error fetching style:', err);
+    reportError(req, err, 'Error fetching style');
     res.status(500).json({ error: 'Server error fetching style' });
   }
 };
@@ -94,7 +95,7 @@ exports.createStyle = async (req, res) => {
     logAudit({ action: 'style_created', details: { styleId: style._id, name: style.name }, userId: req.user.id });
     res.status(201).json({ ...style.toObject(), variants: createdVariants });
   } catch (err) {
-    console.error('Error creating style:', err);
+    reportError(req, err, 'Error creating style');
     if (err.code === 11000) {
       return res.status(400).json({ error: 'A style or variant with that code/SKU/barcode already exists' });
     }
@@ -114,7 +115,7 @@ exports.updateStyle = async (req, res) => {
     logAudit({ action: 'style_updated', details: { styleId: updated._id, changes: setFields }, userId: req.user.id });
     res.json(updated);
   } catch (err) {
-    console.error('Error updating style:', err);
+    reportError(req, err, 'Error updating style');
     if (err.code === 11000) {
       return res.status(400).json({ error: 'A style with this style code already exists' });
     }
@@ -133,7 +134,7 @@ exports.deleteStyle = async (req, res) => {
     logAudit({ action: 'style_deleted', details: { styleId: deleted._id, name: deleted.name }, userId: req.user.id });
     res.json({ message: 'Style and its variants deleted' });
   } catch (err) {
-    console.error('Error deleting style:', err);
+    reportError(req, err, 'Error deleting style');
     res.status(400).json({ error: 'Error deleting style' });
   }
 };

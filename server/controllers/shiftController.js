@@ -1,4 +1,5 @@
 const Shift = require('../models/Shift');
+const { reportError } = require('../utils/reportError');
 const Sale = require('../models/Sale');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -17,7 +18,7 @@ exports.openShift = async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'You already have an open shift' });
     }
-    console.error('Error opening shift:', err);
+    reportError(req, err, 'Error opening shift');
     res.status(400).json({ error: 'Failed to open shift' });
   }
 };
@@ -28,7 +29,7 @@ exports.getCurrentShift = async (req, res) => {
     const shift = await Shift.findOne({ openedBy: req.user.id, status: 'open' });
     res.json(shift);
   } catch (err) {
-    console.error('Error fetching current shift:', err);
+    reportError(req, err, 'Error fetching current shift');
     res.status(500).json({ error: 'Server error fetching current shift' });
   }
 };
@@ -89,7 +90,7 @@ exports.closeShift = async (req, res) => {
 
     res.json(shift);
   } catch (err) {
-    console.error('Error closing shift:', err);
+    reportError(req, err, 'Error closing shift');
     res.status(400).json({ error: 'Failed to close shift' });
   }
 };
@@ -114,7 +115,7 @@ exports.getAllShifts = async (req, res) => {
 
     res.json({ shifts, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (err) {
-    console.error('Error fetching shifts:', err);
+    reportError(req, err, 'Error fetching shifts');
     res.status(500).json({ error: 'Server error fetching shifts' });
   }
 };

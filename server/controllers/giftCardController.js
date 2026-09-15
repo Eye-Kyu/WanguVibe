@@ -1,4 +1,5 @@
 const GiftCard = require('../models/GiftCard');
+const { reportError } = require('../utils/reportError');
 
 // GET /api/giftcards/lookup?code=... — used by the POS to show a card's
 // live balance before redeeming it.
@@ -11,7 +12,7 @@ exports.lookupByCode = async (req, res) => {
     if (!card) return res.status(404).json({ error: `No gift card found for code: ${code}` });
     res.json(card);
   } catch (err) {
-    console.error('Error looking up gift card:', err);
+    reportError(req, err, 'Error looking up gift card');
     res.status(500).json({ error: 'Server error looking up gift card' });
   }
 };
@@ -34,7 +35,7 @@ exports.getAllGiftCards = async (req, res) => {
 
     res.json({ giftCards, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (err) {
-    console.error('Error fetching gift cards:', err);
+    reportError(req, err, 'Error fetching gift cards');
     res.status(500).json({ error: 'Server error fetching gift cards' });
   }
 };

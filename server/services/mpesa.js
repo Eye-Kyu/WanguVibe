@@ -12,6 +12,8 @@
 // Daraja developer docs before relying on them in production, since API
 // specifics are exactly the kind of thing that can change over time.
 
+const { reportError } = require('../utils/reportError');
+
 const MODE = process.env.MPESA_MODE || 'mock';
 
 function randomId(prefix) {
@@ -68,7 +70,7 @@ async function initiateStkPush({ phone, amount, accountReference, simulateFailur
       const callbackUrl = `http://localhost:${process.env.PORT || 5000}/api/payments/mpesa/callback`;
       const body = mockCallbackBody({ checkoutRequestId, merchantRequestId, amount, phone, simulateFailure });
       fetch(callbackUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        .catch(err => console.error('Mock M-Pesa callback self-post failed:', err.message));
+        .catch(err => reportError(null, err, 'Mock M-Pesa callback self-post failed'));
     }, 2000);
 
     return { checkoutRequestId, merchantRequestId, responseCode: '0', responseDescription: 'Success. Request accepted for processing (mock)' };

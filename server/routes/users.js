@@ -1,4 +1,5 @@
 const express = require('express');
+const { reportError } = require('../utils/reportError');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
@@ -35,7 +36,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
         delete result.password;
         res.json(result);
     } catch (err) {
-        console.error('Error updating user:', err);
+        reportError(req, err, 'Error updating user');
         res.status(500).json({ error: 'Failed to update user' });
     }
 });

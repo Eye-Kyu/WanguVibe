@@ -1,4 +1,5 @@
 const Variant = require('../models/Variant');
+const { reportError } = require('../utils/reportError');
 const Style = require('../models/Style');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -23,7 +24,7 @@ exports.createVariant = async (req, res) => {
     logAudit({ action: 'variant_created', details: { variantId: variant._id, styleId: style._id, size, color, sku }, userId: req.user.id });
     res.status(201).json(variant);
   } catch (err) {
-    console.error('Error creating variant:', err);
+    reportError(req, err, 'Error creating variant');
     if (err.code === 11000) {
       return res.status(400).json({ error: 'That size/color already exists for this style, or the SKU/barcode is already in use' });
     }
@@ -36,7 +37,7 @@ exports.getVariantsForStyle = async (req, res) => {
     const variants = await Variant.find({ style: req.params.styleId });
     res.json(variants);
   } catch (err) {
-    console.error('Error fetching variants:', err);
+    reportError(req, err, 'Error fetching variants');
     res.status(500).json({ error: 'Server error fetching variants' });
   }
 };
@@ -62,7 +63,7 @@ exports.updateVariant = async (req, res) => {
     logAudit({ action: 'variant_updated', details: { variantId: updated._id, changes: setFields }, userId: req.user.id });
     res.json(updated);
   } catch (err) {
-    console.error('Error updating variant:', err);
+    reportError(req, err, 'Error updating variant');
     if (err.code === 11000) {
       return res.status(400).json({ error: 'That SKU, barcode, or size/color combination is already in use' });
     }
@@ -77,7 +78,7 @@ exports.deleteVariant = async (req, res) => {
     logAudit({ action: 'variant_deleted', details: { variantId: deleted._id, sku: deleted.sku }, userId: req.user.id });
     res.json({ message: 'Variant deleted' });
   } catch (err) {
-    console.error('Error deleting variant:', err);
+    reportError(req, err, 'Error deleting variant');
     res.status(400).json({ error: 'Error deleting variant' });
   }
 };
@@ -92,7 +93,7 @@ exports.lookupByBarcode = async (req, res) => {
     if (!variant) return res.status(404).json({ error: `No variant found for barcode: ${barcode}` });
     res.json(variant);
   } catch (err) {
-    console.error('Error looking up barcode:', err);
+    reportError(req, err, 'Error looking up barcode');
     res.status(500).json({ error: 'Server error looking up barcode' });
   }
 };
@@ -106,7 +107,7 @@ exports.getLowStockVariants = async (req, res) => {
       .populate('style', 'name styleCode category');
     res.json(variants);
   } catch (err) {
-    console.error('Error fetching low stock variants:', err);
+    reportError(req, err, 'Error fetching low stock variants');
     res.status(500).json({ error: 'Server error fetching low stock variants' });
   }
 };

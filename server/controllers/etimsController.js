@@ -1,4 +1,5 @@
 const Sale = require('../models/Sale');
+const { reportError } = require('../utils/reportError');
 const EtimsRetryQueue = require('../models/EtimsRetryQueue');
 const { submitInvoice } = require('../services/etims');
 const { logAudit } = require('../utils/auditLogger');
@@ -24,7 +25,7 @@ exports.getRetryQueue = async (req, res) => {
 
     res.json({ entries, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (err) {
-    console.error('Error fetching eTIMS retry queue:', err);
+    reportError(req, err, 'Error fetching eTIMS retry queue');
     res.status(500).json({ error: 'Server error fetching eTIMS retry queue' });
   }
 };
@@ -68,7 +69,7 @@ exports.retrySubmission = async (req, res) => {
 
     res.status(400).json({ error: result.error || 'eTIMS still unreachable' });
   } catch (err) {
-    console.error('Error retrying eTIMS submission:', err);
+    reportError(req, err, 'Error retrying eTIMS submission');
     res.status(400).json({ error: err.message || 'Failed to retry eTIMS submission' });
   }
 };

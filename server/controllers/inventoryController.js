@@ -1,4 +1,5 @@
 const InventoryLog = require('../models/InventoryLog');
+const { reportError } = require('../utils/reportError');
 const Variant = require('../models/Variant');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -25,7 +26,7 @@ exports.restockVariant = async (req, res) => {
 
         res.status(200).json({ message: 'Variant restocked', variant, log });
     } catch (err) {
-        console.error('Error restocking variant:', err);
+        reportError(req, err, 'Error restocking variant');
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -38,7 +39,7 @@ exports.getInventoryLogs = async (req, res) => {
             .populate('user', 'name email');
         res.status(200).json(logs);
     } catch (err) {
-        console.error('Error fetching inventory logs:', err);
+        reportError(req, err, 'Error fetching inventory logs');
         res.status(500).json({ error: 'Server error' });
     }
 };

@@ -1,4 +1,5 @@
 const Audit = require('../models/Audit');
+const { reportError } = require('../utils/reportError');
 
 exports.logAction = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ exports.logAction = async (req, res) => {
     await audit.save();
     res.status(201).json({ message: 'Action logged' });
   } catch (err) {
-    console.error('Audit log error:', err);
+    reportError(req, err, 'Audit log error');
     res.status(400).json({ error: 'Failed to log action' });
   }
 };
@@ -47,7 +48,7 @@ exports.getAuditLogs = async (req, res) => {
 
     res.json({ logs, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (err) {
-    console.error('Error fetching audit logs:', err);
+    reportError(req, err, 'Error fetching audit logs');
     res.status(500).json({ error: 'Server error fetching audit logs' });
   }
 };

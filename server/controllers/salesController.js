@@ -11,6 +11,7 @@ const { logAudit } = require('../utils/auditLogger');
 const HttpError = require('../utils/httpError');
 const { generateGiftCardCode } = require('../utils/giftCard');
 const { submitInvoice } = require('../services/etims');
+const { reportError } = require('../utils/reportError');
 
 const PAYMENT_METHODS = ['cash', 'mpesa', 'card', 'store_credit', 'gift_card'];
 
@@ -221,7 +222,7 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
         );
       }
     } catch (etimsErr) {
-      console.error('eTIMS submission failed:', etimsErr.message);
+      reportError(null, etimsErr, 'eTIMS submission failed');
       sale.etimsStatus = 'unreachable';
       await sale.save().catch(() => {});
       await EtimsRetryQueue.findOneAndUpdate(
@@ -253,7 +254,7 @@ exports.createSale = async (req, res) => {
     res.status(201).json(populatedSale);
   } catch (err) {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
-    console.error('Error creating sale:', err);
+    reportError(req, err, 'Error creating sale');
     res.status(400).json({ error: err.message });
   }
 };
@@ -269,7 +270,7 @@ exports.getAllSales = async (req, res) => {
     const sales = await populateSale(query);
     res.json(sales);
   } catch (err) {
-    console.error('Error fetching sales:', err);
+    reportError(req, err, 'Error fetching sales');
     res.status(500).json({ error: 'Server error fetching sales' });
   }
 };
@@ -281,7 +282,7 @@ exports.getSaleById = async (req, res) => {
     if (!sale) return res.status(404).json({ error: 'Sale not found' });
     res.json(sale);
   } catch (err) {
-    console.error('Error fetching sale:', err);
+    reportError(req, err, 'Error fetching sale');
     res.status(500).json({ error: 'Server error fetching sale' });
   }
 };
@@ -297,7 +298,7 @@ exports.getSalesReport = async (req, res) => {
     const sales = await populateSale(Sale.find(query));
     res.json(sales);
   } catch (err) {
-    console.error('Error fetching sales report:', err);
+    reportError(req, err, 'Error fetching sales report');
     res.status(500).json({ error: 'Server error fetching sales report' });
   }
 };
@@ -387,7 +388,7 @@ exports.returnSale = async (req, res) => {
     res.json({ sale: populatedSale, refundAmount: parseFloat(refundAmount.toFixed(2)) });
   } catch (err) {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
-    console.error('Error processing return:', err);
+    reportError(req, err, 'Error processing return');
     res.status(400).json({ error: err.message });
   } finally {
     session.endSession();
@@ -402,7 +403,7 @@ exports.deleteSale = async (req, res) => {
     logAudit({ action: 'sale_deleted', details: { saleId: sale._id, totalAmount: sale.totalAmount }, userId: req.user.id });
     res.json({ message: 'Sale deleted' });
   } catch (err) {
-    console.error('Error deleting sale:', err);
+    reportError(req, err, 'Error deleting sale');
     res.status(500).json({ error: 'Server error deleting sale' });
   }
 };

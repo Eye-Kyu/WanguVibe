@@ -1,3 +1,4 @@
+import './sentry.js'; // must load before anything else, per Sentry's setup guidance
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';

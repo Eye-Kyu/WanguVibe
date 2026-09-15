@@ -1,4 +1,6 @@
 const Audit = require('../models/Audit');
+const Sentry = require('@sentry/node');
+const logger = require('./logger');
 
 // Fire-and-forget audit write, called from inside controllers after the
 // action it describes has already succeeded. Never let a logging failure
@@ -7,7 +9,8 @@ async function logAudit({ action, details, userId }) {
   try {
     await Audit.create({ action, details, userId });
   } catch (err) {
-    console.error('Audit log write failed:', err.message);
+    logger.error({ err, action, userId }, 'Audit log write failed');
+    Sentry.captureException(err);
   }
 }
 
