@@ -28,10 +28,10 @@ describe('closeShift — reconciliation math', () => {
     const shift = await Shift.create({ openedBy: cashier._id, openingFloat: 5000 });
     const line = await makeSaleLine();
 
-    await Sale.create({ items: [line], totalAmount: 1000, paymentMethod: 'cash', cashier: cashier._id, shift: shift._id });
-    await Sale.create({ items: [line], totalAmount: 2000, paymentMethod: 'cash', cashier: cashier._id, shift: shift._id });
+    await Sale.create({ items: [line], totalAmount: 1000, paymentMethod: 'cash', payments: [{ method: 'cash', amount: 1000 }], cashier: cashier._id, shift: shift._id });
+    await Sale.create({ items: [line], totalAmount: 2000, paymentMethod: 'cash', payments: [{ method: 'cash', amount: 2000 }], cashier: cashier._id, shift: shift._id });
     // A non-cash sale on the same shift must not count toward expected cash.
-    await Sale.create({ items: [line], totalAmount: 9000, paymentMethod: 'mpesa', cashier: cashier._id, shift: shift._id });
+    await Sale.create({ items: [line], totalAmount: 9000, paymentMethod: 'mpesa', payments: [{ method: 'mpesa', amount: 9000 }], cashier: cashier._id, shift: shift._id });
 
     const req = { params: { id: shift._id.toString() }, body: { closingCount: 8100 }, user: { id: cashier._id.toString(), role: 'cashier' } };
     const res = mockRes();
@@ -44,6 +44,29 @@ describe('closeShift — reconciliation math', () => {
     expect(saved.status).toBe('closed');
   });
 
+  test('the cash portion of a split-tender sale counts toward expected cash', async () => {
+    const shift = await Shift.create({ openedBy: cashier._id, openingFloat: 1000 });
+    const line = await makeSaleLine();
+
+    // Split sale: 600 cash + 400 card — only the 600 should count as cash.
+    await Sale.create({
+      items: [line],
+      totalAmount: 1000,
+      paymentMethod: 'split',
+      payments: [{ method: 'cash', amount: 600 }, { method: 'card', amount: 400 }],
+      cashier: cashier._id,
+      shift: shift._id,
+    });
+
+    const req = { params: { id: shift._id.toString() }, body: { closingCount: 1600 }, user: { id: cashier._id.toString(), role: 'cashier' } };
+    const res = mockRes();
+    await shiftController.closeShift(req, res);
+
+    const saved = await Shift.findById(shift._id);
+    expect(saved.expectedCash).toBe(1600); // 1000 opening float + 600 cash leg
+    expect(saved.discrepancy).toBe(0);
+  });
+
   test('cash refunds processed during this shift reduce expected cash, regardless of which shift the original sale belongs to', async () => {
     const shift = await Shift.create({ openedBy: cashier._id, openingFloat: 5000 });
     const line = await makeSaleLine();
@@ -54,6 +77,7 @@ describe('closeShift — reconciliation math', () => {
       items: [{ ...line, returnedQuantity: 1 }],
       totalAmount: 3000,
       paymentMethod: 'card',
+      payments: [{ method: 'card', amount: 3000 }],
       cashier: cashier._id,
       shift: otherShift._id,
       returns: [{ destination: 'cash', amount: 3000, items: [{ variant: line.variant, quantity: 1 }], processedBy: cashier._id, processedAt: new Date() }],
@@ -78,6 +102,7 @@ describe('closeShift — reconciliation math', () => {
       items: [{ ...line, returnedQuantity: 1 }],
       totalAmount: 3000,
       paymentMethod: 'card',
+      payments: [{ method: 'card', amount: 3000 }],
       cashier: cashier._id,
       returns: [{ destination: 'cash', amount: 3000, items: [{ variant: line.variant, quantity: 1 }], processedBy: cashier._id, processedAt: before }],
     });

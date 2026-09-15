@@ -30,41 +30,57 @@ exports.getRetryQueue = async (req, res) => {
   }
 };
 
-// POST /api/etims/retry/:saleId — admin-only manual retry (v1 has no
-// automated sweep, since no job-queue infra exists in this app).
+// Shared by the manual admin retry endpoint below and the automated sweep in
+// services/scheduledJobs.js, so "what it means to retry a submission" is
+// defined once. `entry` may be null (a sale flagged for retry with no
+// existing queue row yet); returns { success, invoiceNumber, error }.
+async function attemptRetry(sale, entry) {
+  const result = await submitInvoice(sale, {});
+
+  if (result.status === 'accepted') {
+    sale.etimsStatus = 'accepted';
+    sale.etimsInvoiceNumber = result.invoiceNumber;
+    sale.etimsQrPayload = result.qrPayload;
+    sale.etimsSubmittedAt = new Date();
+    await sale.save();
+
+    if (entry) {
+      entry.status = 'resolved';
+      entry.lastAttemptAt = new Date();
+      await entry.save();
+    }
+
+    return { success: true, invoiceNumber: result.invoiceNumber };
+  }
+
+  if (entry) {
+    entry.attempts += 1;
+    entry.lastError = result.error;
+    entry.lastAttemptAt = new Date();
+    entry.status = 'pending';
+    await entry.save();
+  } else {
+    await EtimsRetryQueue.create({ sale: sale._id, lastError: result.error, lastAttemptAt: new Date() });
+  }
+
+  return { success: false, error: result.error };
+}
+exports.attemptRetry = attemptRetry;
+
+// POST /api/etims/retry/:saleId — admin-only manual retry. Automated retries
+// also happen now via services/scheduledJobs.js; this stays for an admin who
+// wants to force one immediately rather than wait for the next sweep tick.
 exports.retrySubmission = async (req, res) => {
   try {
     const sale = await Sale.findById(req.params.saleId);
     if (!sale) return res.status(404).json({ error: 'Sale not found' });
 
     const entry = await EtimsRetryQueue.findOne({ sale: sale._id });
-    const result = await submitInvoice(sale, {});
+    const result = await attemptRetry(sale, entry);
 
-    if (result.status === 'accepted') {
-      sale.etimsStatus = 'accepted';
-      sale.etimsInvoiceNumber = result.invoiceNumber;
-      sale.etimsQrPayload = result.qrPayload;
-      sale.etimsSubmittedAt = new Date();
-      await sale.save();
-
-      if (entry) {
-        entry.status = 'resolved';
-        entry.lastAttemptAt = new Date();
-        await entry.save();
-      }
-
+    if (result.success) {
       logAudit({ action: 'etims_retry_resolved', details: { saleId: sale._id, invoiceNumber: result.invoiceNumber }, userId: req.user.id });
       return res.json({ message: 'eTIMS submission succeeded', sale });
-    }
-
-    if (entry) {
-      entry.attempts += 1;
-      entry.lastError = result.error;
-      entry.lastAttemptAt = new Date();
-      entry.status = 'pending';
-      await entry.save();
-    } else {
-      await EtimsRetryQueue.create({ sale: sale._id, lastError: result.error, lastAttemptAt: new Date() });
     }
 
     res.status(400).json({ error: result.error || 'eTIMS still unreachable' });

@@ -469,6 +469,291 @@ async function main() {
     if (giftSaleSell?._id) await hit('Cleanup: delete gift-card-sale sale', 'DELETE', `/sales/${giftSaleSell._id}`, { token: adminToken });
     if (giftStyle?._id) await hit('Cleanup: delete gift-card-test style', 'DELETE', `/styles/${giftStyle._id}`, { token: adminToken });
 
+    // ── Split-tender payments ───────────────────────────────────────────
+    const splitStyleForm = new FormData();
+    splitStyleForm.append('name', 'Smoke Test Split-Tender Style');
+    splitStyleForm.append('basePrice', '1000');
+    splitStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `SPLIT-${Date.now()}`, stock: 10, reorderThreshold: 1 }]));
+    const splitStyle = await hit('Create style for split-tender test (temp)', 'POST', '/styles', { token: adminToken, form: splitStyleForm, expect: [201] });
+    const splitVariant = splitStyle?.variants?.[0];
+
+    // Cash+card here — store-credit/gift-card lines within a split are
+    // already covered thoroughly by server/tests/finalizeSale.test.js
+    // (atomic guards, insufficient-balance rollback, duplicate-line
+    // rejection); this end-to-end pass just needs to prove the whole HTTP
+    // round-trip and the return-destination interaction work.
+    let splitSale = null;
+    if (splitVariant?._id) {
+        splitSale = await hit('Split-tender sale: 600 cash + 400 card', 'POST', '/sales', {
+            token: adminToken,
+            json: {
+                items: [{ variant: splitVariant._id, quantity: 1, discount: 0 }],
+                totalAmount: 1000,
+                payments: [{ method: 'cash', amount: 600 }, { method: 'card', amount: 400 }],
+            },
+            expect: [201],
+        });
+        const splitOk = splitSale?.paymentMethod === 'split' && splitSale?.payments?.length === 2;
+        results.push({ label: 'Split sale has paymentMethod=split and 2 payment lines', method: '-', path: '-', status: splitOk ? 'ok' : JSON.stringify({ paymentMethod: splitSale?.paymentMethod, payments: splitSale?.payments }), ok: splitOk, ms: 0 });
+        splitOk ? passCount++ : failCount++;
+
+        await hit('Split-tender rejected — line amounts do not sum to total', 'POST', '/sales', {
+            token: adminToken,
+            json: {
+                items: [{ variant: splitVariant._id, quantity: 1, discount: 0 }],
+                totalAmount: 1000,
+                payments: [{ method: 'cash', amount: 300 }, { method: 'card', amount: 300 }],
+            },
+            expect: [400],
+        });
+
+        await hit('Split-tender rejected — M-Pesa combined with another method', 'POST', '/sales', {
+            token: adminToken,
+            json: {
+                items: [{ variant: splitVariant._id, quantity: 1, discount: 0 }],
+                totalAmount: 1000,
+                payments: [{ method: 'mpesa', amount: 500 }, { method: 'cash', amount: 500 }],
+            },
+            expect: [400],
+        });
+
+        if (splitSale?._id) {
+            // A split sale has no single "original payment method" to refund to.
+            await hit('Return rejected for a split sale — destination=original_payment', 'POST', `/sales/${splitSale._id}/return`, {
+                token: adminToken,
+                json: { items: [{ variant: splitVariant._id, quantity: 1 }], destination: 'original_payment' },
+                expect: [400],
+            });
+            // cash/store_credit remain valid destinations regardless of the original split.
+            const splitReturnRes = await hit('Return accepted for a split sale — destination=cash', 'POST', `/sales/${splitSale._id}/return`, {
+                token: adminToken,
+                json: { items: [{ variant: splitVariant._id, quantity: 1 }], destination: 'cash' },
+            });
+            const splitReturnOk = splitReturnRes?.sale?.status === 'returned';
+            results.push({ label: 'Split-sale return (destination=cash) succeeds', method: '-', path: '-', status: splitReturnOk ? 'ok' : JSON.stringify(splitReturnRes?.sale?.status), ok: splitReturnOk, ms: 0 });
+            splitReturnOk ? passCount++ : failCount++;
+        }
+    }
+
+    if (splitSale?._id) await hit('Cleanup: delete split-tender sale', 'DELETE', `/sales/${splitSale._id}`, { token: adminToken });
+    if (splitStyle?._id) await hit('Cleanup: delete split-tender-test style', 'DELETE', `/styles/${splitStyle._id}`, { token: adminToken });
+
+    // ── Layaway ──────────────────────────────────────────────────────────
+    const layawayStyleForm = new FormData();
+    layawayStyleForm.append('name', 'Smoke Test Layaway Style');
+    layawayStyleForm.append('basePrice', '1000');
+    layawayStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `LAYAWAY-${Date.now()}`, stock: 10, reorderThreshold: 1 }]));
+    const layawayStyle = await hit('Create style for layaway test (temp)', 'POST', '/styles', { token: adminToken, form: layawayStyleForm, expect: [201] });
+    const layawayVariant = layawayStyle?.variants?.[0];
+    const layawayCustomer = await hit('Create customer for layaway test (temp)', 'POST', '/customers', {
+        token: adminToken,
+        json: { name: 'Layaway Customer', phone: `07${Date.now()}`.slice(0, 12) },
+        expect: [201],
+    });
+
+    let layaway1 = null, layaway2 = null, completedSaleId = null;
+    if (layawayVariant?._id && layawayCustomer?._id) {
+        await hit('Layaway rejected — no customer', 'POST', '/layaways', {
+            token: adminToken,
+            json: { items: [{ variant: layawayVariant._id, quantity: 1, discount: 0 }], totalAmount: 1000, deposit: { amount: 300, method: 'cash' } },
+            expect: [400],
+        });
+        await hit('Layaway rejected — deposit not less than total', 'POST', '/layaways', {
+            token: adminToken,
+            json: { customer: layawayCustomer._id, items: [{ variant: layawayVariant._id, quantity: 1, discount: 0 }], totalAmount: 1000, deposit: { amount: 1000, method: 'cash' } },
+            expect: [400],
+        });
+
+        // Flow 1: create -> pay off the rest -> complete
+        layaway1 = await hit('Create layaway (1000 total, 300 deposit)', 'POST', '/layaways', {
+            token: adminToken,
+            json: { customer: layawayCustomer._id, items: [{ variant: layawayVariant._id, quantity: 1, discount: 0 }], totalAmount: 1000, deposit: { amount: 300, method: 'cash' } },
+            expect: [201],
+        });
+        const createdOk = layaway1?.status === 'active' && layaway1?.balanceRemaining === 700;
+        results.push({ label: 'Layaway created: active, balanceRemaining=700', method: '-', path: '-', status: createdOk ? 'ok' : JSON.stringify({ status: layaway1?.status, balanceRemaining: layaway1?.balanceRemaining }), ok: createdOk, ms: 0 });
+        createdOk ? passCount++ : failCount++;
+
+        const stylesAfterReserve = await hit('List variants for style after layaway reservation', 'GET', `/styles/${layawayStyle._id}/variants`, { token: adminToken });
+        const stockAfterReserveOk = stylesAfterReserve?.find(v => v._id === layawayVariant._id)?.stock === 9;
+        results.push({ label: 'Stock reserved immediately at layaway creation (10 -> 9)', method: '-', path: '-', status: stockAfterReserveOk ? 'ok' : JSON.stringify(stylesAfterReserve?.map(v => v.stock)), ok: stockAfterReserveOk, ms: 0 });
+        stockAfterReserveOk ? passCount++ : failCount++;
+
+        if (layaway1?._id) {
+            await hit('Layaway completion rejected while balance remains', 'POST', `/layaways/${layaway1._id}/complete`, { token: adminToken, expect: [400] });
+
+            const paidRes = await hit('Record layaway installment (400)', 'POST', `/layaways/${layaway1._id}/payment`, {
+                token: adminToken,
+                json: { amount: 400, method: 'card' },
+            });
+            const paidOk = paidRes?.balanceRemaining === 300;
+            results.push({ label: 'Balance after 400 installment = 300', method: '-', path: '-', status: paidOk ? 'ok' : paidRes?.balanceRemaining, ok: paidOk, ms: 0 });
+            paidOk ? passCount++ : failCount++;
+
+            await hit('Layaway payment rejected — exceeds remaining balance', 'POST', `/layaways/${layaway1._id}/payment`, {
+                token: adminToken,
+                json: { amount: 9000, method: 'cash' },
+                expect: [400],
+            });
+
+            const finalPayRes = await hit('Record final layaway installment (300)', 'POST', `/layaways/${layaway1._id}/payment`, {
+                token: adminToken,
+                json: { amount: 300, method: 'cash' },
+            });
+            const finalPayOk = finalPayRes?.balanceRemaining === 0;
+            results.push({ label: 'Balance after final installment = 0', method: '-', path: '-', status: finalPayOk ? 'ok' : finalPayRes?.balanceRemaining, ok: finalPayOk, ms: 0 });
+            finalPayOk ? passCount++ : failCount++;
+
+            const completeRes = await hit('Complete fully-paid layaway', 'POST', `/layaways/${layaway1._id}/complete`, { token: adminToken });
+            completedSaleId = completeRes?.sale?._id;
+            const completeOk = completeRes?.layaway?.status === 'completed' && completeRes?.sale?.paymentMethod === 'split' && completeRes?.sale?.payments?.length === 3;
+            results.push({ label: 'Completed layaway produces a split sale with 3 payment lines', method: '-', path: '-', status: completeOk ? 'ok' : JSON.stringify({ status: completeRes?.layaway?.status, paymentMethod: completeRes?.sale?.paymentMethod, lines: completeRes?.sale?.payments?.length }), ok: completeOk, ms: 0 });
+            completeOk ? passCount++ : failCount++;
+
+            const stylesAfterComplete = await hit('List variants for style after layaway completion', 'GET', `/styles/${layawayStyle._id}/variants`, { token: adminToken });
+            const stockUnchangedOk = stylesAfterComplete?.find(v => v._id === layawayVariant._id)?.stock === 9;
+            results.push({ label: 'Stock unchanged by completion (still 9 — reserved at creation, not decremented twice)', method: '-', path: '-', status: stockUnchangedOk ? 'ok' : JSON.stringify(stylesAfterComplete?.map(v => v.stock)), ok: stockUnchangedOk, ms: 0 });
+            stockUnchangedOk ? passCount++ : failCount++;
+
+            await hit('Re-completing an already-completed layaway rejected', 'POST', `/layaways/${layaway1._id}/complete`, { token: adminToken, expect: [400] });
+        }
+
+        // Flow 2: create -> cancel (store_credit refund)
+        layaway2 = await hit('Create second layaway (2000 total, 500 deposit)', 'POST', '/layaways', {
+            token: adminToken,
+            json: { customer: layawayCustomer._id, items: [{ variant: layawayVariant._id, quantity: 2, discount: 0 }], totalAmount: 2000, deposit: { amount: 500, method: 'cash' } },
+            expect: [201],
+        });
+        if (layaway2?._id) {
+            await hit('Layaway cancel rejected — invalid destination', 'POST', `/layaways/${layaway2._id}/cancel`, {
+                token: adminToken,
+                json: { destination: 'bitcoin' },
+                expect: [400],
+            });
+            const cancelRes = await hit('Cancel layaway (destination=store_credit)', 'POST', `/layaways/${layaway2._id}/cancel`, {
+                token: adminToken,
+                json: { destination: 'store_credit' },
+            });
+            const cancelOk = cancelRes?.status === 'cancelled' && cancelRes?.cancellation?.destination === 'store_credit';
+            results.push({ label: 'Cancelled layaway status=cancelled, destination=store_credit', method: '-', path: '-', status: cancelOk ? 'ok' : JSON.stringify(cancelRes), ok: cancelOk, ms: 0 });
+            cancelOk ? passCount++ : failCount++;
+
+            const custAfterCancel = await hit('Customer balance after layaway cancellation refund', 'GET', `/customers/${layawayCustomer._id}`, { token: adminToken });
+            const refundOk = custAfterCancel?.storeCreditBalance === 500;
+            results.push({ label: 'Customer refunded 500 store credit after cancellation', method: '-', path: '-', status: refundOk ? 'ok' : custAfterCancel?.storeCreditBalance, ok: refundOk, ms: 0 });
+            refundOk ? passCount++ : failCount++;
+
+            await hit('Re-cancelling an already-cancelled layaway rejected', 'POST', `/layaways/${layaway2._id}/cancel`, { token: adminToken, json: { destination: 'forfeit' }, expect: [400] });
+        }
+
+        await hit('List layaways (admin)', 'GET', '/layaways?limit=5', { token: adminToken });
+        await hit('GET /layaways — no token rejected', 'GET', '/layaways', { expect: [401] });
+    }
+
+    if (completedSaleId) await hit('Cleanup: delete completed-layaway sale', 'DELETE', `/sales/${completedSaleId}`, { token: adminToken });
+    if (layawayCustomer?._id) await hit('Cleanup: delete layaway customer', 'DELETE', `/customers/${layawayCustomer._id}`, { token: adminToken });
+    if (layawayStyle?._id) await hit('Cleanup: delete layaway-test style', 'DELETE', `/styles/${layawayStyle._id}`, { token: adminToken });
+
+    // ── Suppliers / Purchase Orders ──────────────────────────────────────
+    await hit('Supplier creation rejected — missing name', 'POST', '/suppliers', { token: adminToken, json: { phone: '0700000000' }, expect: [400] });
+
+    const poSupplier = await hit('Create supplier (temp)', 'POST', '/suppliers', {
+        token: adminToken,
+        json: { name: 'Smoke Test Supplier', contactName: 'Jane Doe', phone: '0700000000' },
+        expect: [201],
+    });
+
+    const poStyleForm = new FormData();
+    poStyleForm.append('name', 'Smoke Test PO Style');
+    poStyleForm.append('basePrice', '1000');
+    poStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `PO-${Date.now()}`, stock: 5, reorderThreshold: 1 }]));
+    const poStyle = await hit('Create style for PO test (temp)', 'POST', '/styles', { token: adminToken, form: poStyleForm, expect: [201] });
+    const poVariant = poStyle?.variants?.[0];
+
+    let po = null;
+    if (poSupplier?._id && poVariant?._id) {
+        await hit('PO creation rejected — no supplier', 'POST', '/purchase-orders', {
+            token: adminToken,
+            json: { items: [{ variant: poVariant._id, quantityOrdered: 10, unitCost: 400 }] },
+            expect: [400],
+        });
+        await hit('PO creation rejected — zero quantity', 'POST', '/purchase-orders', {
+            token: adminToken,
+            json: { supplier: poSupplier._id, items: [{ variant: poVariant._id, quantityOrdered: 0, unitCost: 400 }] },
+            expect: [400],
+        });
+
+        po = await hit('Create purchase order (10 units, 400 each)', 'POST', '/purchase-orders', {
+            token: adminToken,
+            json: { supplier: poSupplier._id, items: [{ variant: poVariant._id, quantityOrdered: 10, unitCost: 400 }] },
+            expect: [201],
+        });
+        const poCreatedOk = po?.status === 'ordered' && po?.items?.[0]?.quantityOrdered === 10 && po?.items?.[0]?.quantityReceived === 0;
+        results.push({ label: 'PO created: status=ordered, quantityOrdered=10, quantityReceived=0', method: '-', path: '-', status: poCreatedOk ? 'ok' : JSON.stringify(po), ok: poCreatedOk, ms: 0 });
+        poCreatedOk ? passCount++ : failCount++;
+
+        if (po?._id) {
+            const partialReceive = await hit('Partially receive PO (6 of 10)', 'POST', `/purchase-orders/${po._id}/receive`, {
+                token: adminToken,
+                json: { items: [{ variant: poVariant._id, quantity: 6 }] },
+            });
+            const partialOk = partialReceive?.status === 'partially_received' && partialReceive?.items?.[0]?.quantityReceived === 6;
+            results.push({ label: 'PO partially received: status=partially_received, quantityReceived=6', method: '-', path: '-', status: partialOk ? 'ok' : JSON.stringify(partialReceive), ok: partialOk, ms: 0 });
+            partialOk ? passCount++ : failCount++;
+
+            const stylesAfterPartial = await hit('List variants for style after partial PO receipt', 'GET', `/styles/${poStyle._id}/variants`, { token: adminToken });
+            const stockAfterPartialOk = stylesAfterPartial?.find(v => v._id === poVariant._id)?.stock === 11;
+            results.push({ label: 'Stock incremented by partial receipt (5 -> 11)', method: '-', path: '-', status: stockAfterPartialOk ? 'ok' : JSON.stringify(stylesAfterPartial?.map(v => v.stock)), ok: stockAfterPartialOk, ms: 0 });
+            stockAfterPartialOk ? passCount++ : failCount++;
+
+            await hit('PO receive rejected — exceeds outstanding quantity', 'POST', `/purchase-orders/${po._id}/receive`, {
+                token: adminToken,
+                json: { items: [{ variant: poVariant._id, quantity: 999 }] },
+                expect: [400],
+            });
+
+            const fullReceive = await hit('Receive remaining PO balance (4 of 10)', 'POST', `/purchase-orders/${po._id}/receive`, {
+                token: adminToken,
+                json: { items: [{ variant: poVariant._id, quantity: 4 }] },
+            });
+            const fullOk = fullReceive?.status === 'received' && fullReceive?.items?.[0]?.quantityReceived === 10;
+            results.push({ label: 'PO fully received: status=received', method: '-', path: '-', status: fullOk ? 'ok' : JSON.stringify(fullReceive), ok: fullOk, ms: 0 });
+            fullOk ? passCount++ : failCount++;
+
+            await hit('PO cancel rejected — already fully received', 'POST', `/purchase-orders/${po._id}/cancel`, { token: adminToken, expect: [400] });
+            await hit('PO receive rejected — already fully received', 'POST', `/purchase-orders/${po._id}/receive`, {
+                token: adminToken,
+                json: { items: [{ variant: poVariant._id, quantity: 1 }] },
+                expect: [400],
+            });
+
+            await hit('Supplier deletion rejected — active PO on file', 'DELETE', `/suppliers/${poSupplier._id}`, { token: adminToken, expect: [400] });
+        }
+
+        // Second PO: create -> cancel (never received, no stock impact)
+        const po2 = await hit('Create second purchase order (for cancel test)', 'POST', '/purchase-orders', {
+            token: adminToken,
+            json: { supplier: poSupplier._id, items: [{ variant: poVariant._id, quantityOrdered: 5, unitCost: 400 }] },
+            expect: [201],
+        });
+        if (po2?._id) {
+            const cancelRes = await hit('Cancel second PO (never received)', 'POST', `/purchase-orders/${po2._id}/cancel`, { token: adminToken });
+            const cancelOk = cancelRes?.status === 'cancelled';
+            results.push({ label: 'PO cancelled: status=cancelled', method: '-', path: '-', status: cancelOk ? 'ok' : cancelRes?.status, ok: cancelOk, ms: 0 });
+            cancelOk ? passCount++ : failCount++;
+        }
+
+        await hit('List purchase orders (admin)', 'GET', '/purchase-orders?limit=5', { token: adminToken });
+        await hit('GET /purchase-orders — no token rejected', 'GET', '/purchase-orders', { expect: [401] });
+    }
+
+    // Cleanup: cancel the first PO isn't possible (already received), and
+    // there's no delete endpoint for purchase orders (append-only, same
+    // convention as audit/inventory logs) — cancel the supplier's remaining
+    // reference by leaving the PO in place, same as gift cards' "a couple of
+    // depleted test docs are left behind" convention.
+    if (poStyle?._id) await hit('Cleanup: delete PO-test style', 'DELETE', `/styles/${poStyle._id}`, { token: adminToken });
+
     // ── M-Pesa (mock mode) ──────────────────────────────────────────────
     await hit('M-Pesa initiate rejected — invalid phone', 'POST', '/payments/mpesa/initiate', {
         token: adminToken,

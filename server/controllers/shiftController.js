@@ -58,9 +58,15 @@ exports.closeShift = async (req, res) => {
     const closedAt = new Date();
 
     const [cashSalesAgg, cashRefundsAgg] = await Promise.all([
+      // Unwinds payments[] rather than matching the whole-sale paymentMethod
+      // field, so the cash portion of a split-tender sale (paymentMethod:
+      // 'split') is still counted — matching flat paymentMethod: 'cash'
+      // would silently miss it entirely.
       Sale.aggregate([
-        { $match: { shift: shift._id, paymentMethod: 'cash' } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        { $match: { shift: shift._id } },
+        { $unwind: '$payments' },
+        { $match: { 'payments.method': 'cash' } },
+        { $group: { _id: null, total: { $sum: '$payments.amount' } } },
       ]),
       Sale.aggregate([
         { $unwind: '$returns' },

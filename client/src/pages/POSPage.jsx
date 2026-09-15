@@ -168,7 +168,7 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                         onClick={() => onQtyChange(item.variantId, -1)}
                         disabled={item.quantity <= 1}
                         className="w-6 h-6 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-300 text-sm font-bold flex items-center justify-center transition-all"
-                    >−</button>
+                    >-</button>
                     <span className="text-sm font-semibold w-6 text-center tabular-nums">{item.quantity}</span>
                     <button
                         onClick={() => onQtyChange(item.variantId, 1)}
@@ -424,6 +424,14 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
     const [giftCardInfo, setGiftCardInfo] = useState(null); // card doc | 'notfound' | null
     const [giftCardChecking, setGiftCardChecking] = useState(false);
     const [mpesaPhone, setMpesaPhone] = useState('');
+    // Split-tender: any combination of cash/card/store_credit/gift_card
+    // (never M-Pesa — its STK-push confirmation is asynchronous, which
+    // doesn't fit "one of several lines confirmed together"). Reuses
+    // selectedCustomer/giftCardInput/giftCardInfo above for the
+    // store_credit/gift_card lines rather than duplicating that state,
+    // since only one of (single-method view, split view) is ever visible.
+    const [splitMode, setSplitMode] = useState(false);
+    const [splitAmounts, setSplitAmounts] = useState({ cash: '', card: '', store_credit: '', gift_card: '' });
     const tenderedNum = parseFloat(tendered) || 0;
     const change = paymentMethod === 'Cash' ? tenderedNum - total : 0;
 
@@ -434,11 +442,13 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
             setGiftCardInput('');
             setGiftCardInfo(null);
             setMpesaPhone('');
+            setSplitMode(false);
+            setSplitAmounts({ cash: '', card: '', store_credit: '', gift_card: '' });
         }
     }, [isOpen]);
 
-    // Dropping a stale selection when the cashier switches payment method
-    useEffect(() => { setSelectedCustomer(null); setGiftCardInput(''); setGiftCardInfo(null); }, [paymentMethod]);
+    // Dropping a stale selection when the cashier switches payment method or mode
+    useEffect(() => { setSelectedCustomer(null); setGiftCardInput(''); setGiftCardInfo(null); }, [paymentMethod, splitMode]);
 
     useEffect(() => {
         if (!giftCardInput.trim()) { setGiftCardInfo(null); return; }
@@ -470,13 +480,38 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
     const giftCardUsable = giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && giftCardInfo.currentBalance >= total;
     const phoneValid = mpesaPhone.replace(/\D/g, '').length >= 9;
-    const confirmDisabled = processing
-        || (paymentMethod === 'Cash' && tenderedNum < total)
+
+    // Split-tender: one amount field per allowed method — entering a
+    // nonzero amount "activates" that line. Simpler and less error-prone
+    // than a freeform add/remove line list, and matches finalizeSale's own
+    // rule of at most one store_credit and one gift_card line per sale.
+    const splitCash = parseFloat(splitAmounts.cash) || 0;
+    const splitCard = parseFloat(splitAmounts.card) || 0;
+    const splitStoreCredit = parseFloat(splitAmounts.store_credit) || 0;
+    const splitGiftCard = parseFloat(splitAmounts.gift_card) || 0;
+    const splitSum = splitCash + splitCard + splitStoreCredit + splitGiftCard;
+    const splitRemaining = total - splitSum;
+    const splitGiftCardUsable = splitGiftCard <= 0 || (giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && giftCardInfo.currentBalance >= splitGiftCard);
+    const splitStoreCreditUsable = splitStoreCredit <= 0 || (selectedCustomer && selectedCustomer.storeCreditBalance >= splitStoreCredit);
+    const splitValid = Math.abs(splitRemaining) < 0.01 && splitStoreCreditUsable && splitGiftCardUsable;
+
+    const confirmDisabled = processing || (splitMode ? !splitValid : (
+        (paymentMethod === 'Cash' && tenderedNum < total)
         || (paymentMethod === 'Store Credit' && (!selectedCustomer || selectedCustomer.storeCreditBalance < total))
         || (paymentMethod === 'Gift Card' && !giftCardUsable)
-        || (paymentMethod === 'M-Pesa' && !phoneValid);
+        || (paymentMethod === 'M-Pesa' && !phoneValid)
+    ));
 
     const handleConfirmClick = () => {
+        if (splitMode) {
+            const payments = [];
+            if (splitCash > 0) payments.push({ method: 'cash', amount: splitCash });
+            if (splitCard > 0) payments.push({ method: 'card', amount: splitCard });
+            if (splitStoreCredit > 0) payments.push({ method: 'store_credit', amount: splitStoreCredit, customer: selectedCustomer?._id });
+            if (splitGiftCard > 0) payments.push({ method: 'gift_card', amount: splitGiftCard, giftCardCode: giftCardInfo?.code });
+            onConfirm({ payments });
+            return;
+        }
         onConfirm({
             customer: paymentMethod === 'Store Credit' ? selectedCustomer?._id : undefined,
             giftCardCode: paymentMethod === 'Gift Card' ? giftCardInfo?.code : undefined,
@@ -514,48 +549,124 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('pos.payment.paymentMethod')}</label>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('pos.payment.paymentMethod')}</label>
+                            <button
+                                onClick={() => setSplitMode(v => !v)}
+                                className={`text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${splitMode ? 'bg-indigo-600 text-white' : 'text-indigo-600 hover:bg-indigo-50'}`}
+                            >
+                                {splitMode ? t('pos.payment.splitToggleOff') : t('pos.payment.splitToggleOn')}
+                            </button>
+                        </div>
                         {/* Two deliberate groups — pay-with-money, then pay-with-stored-value —
                             rather than 5 buttons in a 3-col grid, which leaves an empty cell. */}
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-3 gap-2">
-                                {['Cash', 'M-Pesa', 'Card'].map(m => {
-                                    const { Icon } = methodMeta[m];
-                                    return (
-                                        <button
-                                            key={m}
-                                            onClick={() => onPaymentMethodChange(m)}
-                                            className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
-                                                ? 'border-green-600 bg-green-600 text-white shadow-sm'
-                                                : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
-                                        >
-                                            <Icon className="w-4 h-4" />
-                                            {methodMeta[m].label}
-                                        </button>
-                                    );
-                                })}
+                        {!splitMode && (
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['Cash', 'M-Pesa', 'Card'].map(m => {
+                                        const { Icon } = methodMeta[m];
+                                        return (
+                                            <button
+                                                key={m}
+                                                onClick={() => onPaymentMethodChange(m)}
+                                                className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                                    ? 'border-green-600 bg-green-600 text-white shadow-sm'
+                                                    : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
+                                            >
+                                                <Icon className="w-4 h-4" />
+                                                {methodMeta[m].label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {['Store Credit', 'Gift Card'].map(m => {
+                                        const { Icon } = methodMeta[m];
+                                        return (
+                                            <button
+                                                key={m}
+                                                onClick={() => onPaymentMethodChange(m)}
+                                                className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                                    ? 'border-green-600 bg-green-600 text-white shadow-sm'
+                                                    : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
+                                            >
+                                                <Icon className="w-4 h-4" />
+                                                {methodMeta[m].label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {['Store Credit', 'Gift Card'].map(m => {
-                                    const { Icon } = methodMeta[m];
-                                    return (
-                                        <button
-                                            key={m}
-                                            onClick={() => onPaymentMethodChange(m)}
-                                            className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
-                                                ? 'border-green-600 bg-green-600 text-white shadow-sm'
-                                                : 'border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-700'}`}
-                                        >
-                                            <Icon className="w-4 h-4" />
-                                            {methodMeta[m].label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        )}
                     </div>
 
-                    {paymentMethod === 'M-Pesa' && (
+                    {splitMode && (
+                        <div className="space-y-3">
+                            <div className={`p-2.5 rounded-xl border flex justify-between items-center text-sm font-semibold ${
+                                Math.abs(splitRemaining) < 0.01 ? 'bg-green-50 border-green-200 text-green-700'
+                                    : splitRemaining < 0 ? 'bg-red-50 border-red-200 text-red-600'
+                                    : 'bg-amber-50 border-amber-200 text-amber-700'
+                            }`}>
+                                <span>{Math.abs(splitRemaining) < 0.01 ? 'Fully covered' : splitRemaining > 0 ? 'Remaining' : 'Over by'}</span>
+                                <span className="tabular-nums">KES {Math.abs(splitRemaining).toFixed(2)}</span>
+                            </div>
+
+                            {[
+                                { key: 'cash', label: methodMeta['Cash'].label, Icon: methodMeta['Cash'].Icon },
+                                { key: 'card', label: methodMeta['Card'].label, Icon: methodMeta['Card'].Icon },
+                                { key: 'store_credit', label: methodMeta['Store Credit'].label, Icon: methodMeta['Store Credit'].Icon },
+                                { key: 'gift_card', label: methodMeta['Gift Card'].label, Icon: methodMeta['Gift Card'].Icon },
+                            ].map((line) => (
+                                <div key={line.key}>
+                                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                                        <line.Icon className="w-3.5 h-3.5" /> {line.label}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={splitAmounts[line.key]}
+                                        onChange={e => setSplitAmounts(prev => ({ ...prev, [line.key]: e.target.value }))}
+                                        placeholder="0.00"
+                                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-200"
+                                    />
+                                    {line.key === 'store_credit' && splitStoreCredit > 0 && (
+                                        <div className="mt-1.5">
+                                            <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
+                                            {selectedCustomer && selectedCustomer.storeCreditBalance < splitStoreCredit && (
+                                                <p className="text-[11px] text-red-500 mt-1">
+                                                    Insufficient balance — has KES {selectedCustomer.storeCreditBalance.toFixed(2)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    {line.key === 'gift_card' && splitGiftCard > 0 && (
+                                        <div className="mt-1.5">
+                                            <input
+                                                value={giftCardInput}
+                                                onChange={e => setGiftCardInput(e.target.value)}
+                                                placeholder="e.g. GC-3F9A2B1C0D"
+                                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                            />
+                                            {giftCardChecking && <p className="text-[11px] text-gray-400 mt-1">Checking…</p>}
+                                            {!giftCardChecking && giftCardInfo === 'notfound' && (
+                                                <p className="text-[11px] text-red-500 mt-1">No gift card found for that code</p>
+                                            )}
+                                            {!giftCardChecking && giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status !== 'active' && (
+                                                <p className="text-[11px] text-red-500 mt-1">This card is {giftCardInfo.status}, not active</p>
+                                            )}
+                                            {!giftCardChecking && giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && giftCardInfo.currentBalance < splitGiftCard && (
+                                                <p className="text-[11px] text-red-500 mt-1">
+                                                    Card balance KES {giftCardInfo.currentBalance.toFixed(2)} is less than this line's amount
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {!splitMode && paymentMethod === 'M-Pesa' && (
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Customer's M-Pesa Phone</label>
                             <input
@@ -570,7 +681,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                         </div>
                     )}
 
-                    {paymentMethod === 'Store Credit' && (
+                    {!splitMode && paymentMethod === 'Store Credit' && (
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Customer</label>
                             <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
@@ -582,7 +693,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                         </div>
                     )}
 
-                    {paymentMethod === 'Gift Card' && (
+                    {!splitMode && paymentMethod === 'Gift Card' && (
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Gift Card Code</label>
                             <input
@@ -614,7 +725,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                         </div>
                     )}
 
-                    {paymentMethod === 'Cash' && (
+                    {!splitMode && paymentMethod === 'Cash' && (
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('pos.payment.cashTendered')}</label>
                             <input
@@ -681,6 +792,177 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 });
 PaymentModal.displayName = 'PaymentModal';
 
+// ─── Layaway Modal ────────────────────────────────────────────────────────────
+// Reserves the cart's items against a deposit — a customer is required
+// (unlike a normal sale), and the deposit itself supports the same
+// cash/card/store_credit/gift_card methods as split-tender (no M-Pesa: its
+// STK-push confirmation is asynchronous, which doesn't fit this
+// synchronous "record a deposit now" flow).
+const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) => {
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [depositAmount, setDepositAmount] = useState('');
+    const [depositMethod, setDepositMethod] = useState('cash');
+    const [giftCardInput, setGiftCardInput] = useState('');
+    const [giftCardInfo, setGiftCardInfo] = useState(null);
+    const [giftCardChecking, setGiftCardChecking] = useState(false);
+    const [dueDate, setDueDate] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedCustomer(null);
+            setDepositAmount('');
+            setDepositMethod('cash');
+            setGiftCardInput('');
+            setGiftCardInfo(null);
+            setDueDate('');
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!giftCardInput.trim()) { setGiftCardInfo(null); return; }
+        setGiftCardChecking(true);
+        const handle = setTimeout(() => {
+            api.get(`/giftcards/lookup?code=${encodeURIComponent(giftCardInput.trim())}`)
+                .then(res => setGiftCardInfo(res.data))
+                .catch(() => setGiftCardInfo('notfound'))
+                .finally(() => setGiftCardChecking(false));
+        }, 400);
+        return () => clearTimeout(handle);
+    }, [giftCardInput]);
+
+    if (!isOpen) return null;
+
+    const depositNum = parseFloat(depositAmount) || 0;
+    const balanceAfterDeposit = total - depositNum;
+    const giftCardUsable = depositMethod !== 'gift_card' || (giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && giftCardInfo.currentBalance >= depositNum);
+    const storeCreditUsable = depositMethod !== 'store_credit' || (selectedCustomer && selectedCustomer.storeCreditBalance >= depositNum);
+    const confirmDisabled = processing
+        || !selectedCustomer
+        || depositNum <= 0
+        || depositNum >= total
+        || !giftCardUsable
+        || !storeCreditUsable;
+
+    const handleConfirmClick = () => {
+        onConfirm({
+            customer: selectedCustomer._id,
+            deposit: { amount: depositNum, method: depositMethod, giftCardCode: depositMethod === 'gift_card' ? giftCardInfo?.code : undefined },
+            dueDate: dueDate || undefined,
+        });
+    };
+
+    const depositMethods = [
+        { key: 'cash', label: 'Cash', Icon: IconCash },
+        { key: 'card', label: 'Card', Icon: IconCard },
+        { key: 'store_credit', label: 'Store Credit', Icon: IconTag },
+        { key: 'gift_card', label: 'Gift Card', Icon: IconGift },
+    ];
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+                <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-t-2xl">
+                    <p className="text-sm font-medium opacity-80">Layaway Total</p>
+                    <p className="text-3xl font-black tabular-nums mt-0.5">
+                        KES {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Customer</label>
+                        <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Deposit Amount</label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={depositAmount}
+                            onChange={e => setDepositAmount(e.target.value)}
+                            placeholder="0.00"
+                            autoFocus
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+                        {depositNum > 0 && depositNum < total && (
+                            <p className="text-[11px] text-gray-400 mt-1.5">Balance due after deposit: KES {balanceAfterDeposit.toFixed(2)}</p>
+                        )}
+                        {depositNum >= total && depositNum > 0 && (
+                            <p className="text-[11px] text-red-500 mt-1">Deposit must be less than the total — pay in full as a normal sale instead</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Deposit Method</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {depositMethods.map(m => (
+                                <button
+                                    key={m.key}
+                                    onClick={() => setDepositMethod(m.key)}
+                                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${depositMethod === m.key
+                                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
+                                        : 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-700'}`}
+                                >
+                                    <m.Icon className="w-4 h-4" />
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {depositMethod === 'store_credit' && selectedCustomer && depositNum > selectedCustomer.storeCreditBalance && (
+                        <p className="text-[11px] text-red-500">Insufficient balance — has KES {selectedCustomer.storeCreditBalance.toFixed(2)}</p>
+                    )}
+
+                    {depositMethod === 'gift_card' && (
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Gift Card Code</label>
+                            <input
+                                value={giftCardInput}
+                                onChange={e => setGiftCardInput(e.target.value)}
+                                placeholder="e.g. GC-3F9A2B1C0D"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            />
+                            {giftCardChecking && <p className="text-[11px] text-gray-400 mt-1.5">Checking…</p>}
+                            {!giftCardChecking && giftCardInfo === 'notfound' && (
+                                <p className="text-[11px] text-red-500 mt-1.5">No gift card found for that code</p>
+                            )}
+                            {!giftCardChecking && giftCardInfo && giftCardInfo !== 'notfound' && giftCardInfo.status === 'active' && giftCardInfo.currentBalance < depositNum && (
+                                <p className="text-[11px] text-red-500 mt-1.5">Balance KES {giftCardInfo.currentBalance.toFixed(2)} is less than the deposit</p>
+                            )}
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Due Date (optional)</label>
+                        <input
+                            type="date"
+                            value={dueDate}
+                            onChange={e => setDueDate(e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+                    </div>
+                </div>
+
+                <div className="px-5 pb-5 flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleConfirmClick}
+                        disabled={confirmDisabled}
+                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        {processing ? 'Processing…' : <><IconCheck className="w-4 h-4" /> Start Layaway</>}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
+LayawayModal.displayName = 'LayawayModal';
+
 // ─── Receipt Modal ────────────────────────────────────────────────────────────
 const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
     const [qrUrl, setQrUrl] = useState('');
@@ -731,10 +1013,19 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                             <span>Cashier</span>
                             <span>{sale.cashier?.name || 'Unknown'}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span>Payment</span>
-                            <span className="font-semibold capitalize">{sale.paymentMethod}</span>
-                        </div>
+                        {sale.payments?.length > 1 ? (
+                            sale.payments.map((p, i) => (
+                                <div key={i} className="flex justify-between">
+                                    <span>Payment ({p.method.replace('_', ' ')})</span>
+                                    <span className="font-semibold">KES {p.amount.toFixed(2)}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex justify-between">
+                                <span>Payment</span>
+                                <span className="font-semibold capitalize">{sale.paymentMethod}</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="border-t border-dashed border-gray-200 pt-3 mb-3 font-mono text-[11px] space-y-1">
@@ -756,7 +1047,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                         {sale.cartDiscount > 0 && (
                             <div className="flex justify-between text-green-600">
                                 <span>Order Discount ({sale.cartDiscount}%)</span>
-                                <span>−KES {(subtotal * sale.cartDiscount / 100).toFixed(2)}</span>
+                                <span>-KES {(subtotal * sale.cartDiscount / 100).toFixed(2)}</span>
                             </div>
                         )}
                         <div className="flex justify-between font-black text-sm text-gray-800 mt-1 pt-1 border-t border-gray-200">
@@ -766,7 +1057,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                         {sale.giftCardRedeemed?.code && (
                             <div className="flex justify-between text-gray-500">
                                 <span>Paid via Gift Card {sale.giftCardRedeemed.code}</span>
-                                <span>−KES {sale.giftCardRedeemed.amount?.toFixed(2)}</span>
+                                <span>-KES {sale.giftCardRedeemed.amount?.toFixed(2)}</span>
                             </div>
                         )}
                     </div>
@@ -832,6 +1123,7 @@ export default function POSPage() {
     const [loading, setLoading] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
+    const [showLayaway, setShowLayaway] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [saleDetails, setSaleDetails] = useState(null);
     const [cartDiscount, setCartDiscount] = useState(0);
@@ -1065,12 +1357,16 @@ export default function POSPage() {
     }, [search, resolveBarcode, addVariantToCart]);
 
     // ── Confirm payment ──
-    const handleConfirmPayment = useCallback(async ({ customer, giftCardCode, phone } = {}) => {
+    const handleConfirmPayment = useCallback(async ({ customer, giftCardCode, phone, payments } = {}) => {
         // M-Pesa can't complete synchronously — it starts an STK push and
         // waits for Safaricom's async callback instead of creating the sale
         // right away. Cash/Card/Store Credit/Gift Card all still complete
-        // the instant the cashier confirms.
-        if (paymentMethod === 'M-Pesa') {
+        // the instant the cashier confirms. A split-tender submission
+        // (payments present) never includes M-Pesa by design — checked here
+        // too, not just relying on `paymentMethod`, since that parent state
+        // can be stale (e.g. left on 'M-Pesa' from before the cashier
+        // switched into split mode).
+        if (!payments && paymentMethod === 'M-Pesa') {
             setProcessing(true);
             try {
                 const payload = {
@@ -1098,11 +1394,9 @@ export default function POSPage() {
                 items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
                 totalAmount: grandTotal,
                 cartDiscount,
-                paymentMethod,
                 shift: currentShift?._id,
-                customer,
-                giftCardCode,
                 giftCardsSold: giftCardsToSell.map(({ amount }) => ({ amount })),
+                ...(payments ? { payments } : { paymentMethod, customer, giftCardCode }),
             };
             const res = await api.post('/sales', payload);
             setSaleDetails(res.data);
@@ -1120,6 +1414,34 @@ export default function POSPage() {
             setProcessing(false);
         }
     }, [cart, grandTotal, cartDiscount, paymentMethod, currentShift, giftCardsToSell, loadStyles, t]);
+
+    // Reserves the cart's items against a deposit instead of completing a
+    // sale — doesn't touch giftCardsToSell (a separate, still-pending
+    // concern the cashier would complete via a normal checkout afterward).
+    const handleConfirmLayaway = useCallback(async ({ customer, deposit, dueDate }) => {
+        setProcessing(true);
+        try {
+            const payload = {
+                items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
+                totalAmount: grandTotal,
+                cartDiscount,
+                customer,
+                deposit,
+                dueDate,
+            };
+            await api.post('/layaways', payload);
+            toast.success('Layaway created');
+            setCart([]);
+            setCartDiscount(0);
+            setShowLayaway(false);
+            setMobileCartOpen(false);
+            loadStyles(); // refresh stock counts — items are reserved immediately
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to create layaway');
+        } finally {
+            setProcessing(false);
+        }
+    }, [cart, grandTotal, cartDiscount, loadStyles]);
 
     // ── Poll for M-Pesa STK-push confirmation while mpesaWaiting is active ──
     useEffect(() => {
@@ -1513,6 +1835,14 @@ export default function POSPage() {
                                 ? (giftCardsToSell.length > 0 ? 'Add an item to check out with this gift card' : t('pos.cart.checkoutEmpty'))
                                 : `${t('pos.cart.checkout')}  ·  KES ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                         </button>
+                        {cart.length > 0 && (
+                            <button
+                                onClick={() => setShowLayaway(true)}
+                                className="w-full py-2 rounded-xl font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors text-xs"
+                            >
+                                Put on layaway instead
+                            </button>
+                        )}
                     </div>
                 </aside>
             </div>
@@ -1566,6 +1896,14 @@ export default function POSPage() {
                 paymentMethod={paymentMethod}
                 onPaymentMethodChange={setPaymentMethod}
                 onConfirm={handleConfirmPayment}
+                processing={processing}
+            />
+
+            <LayawayModal
+                isOpen={showLayaway}
+                onClose={() => setShowLayaway(false)}
+                total={grandTotal}
+                onConfirm={handleConfirmLayaway}
                 processing={processing}
             />
 

@@ -123,12 +123,23 @@ router.get('/summary', protect, async (req, res) => {
                 { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
             ]),
 
+            // Unwinds payments[] rather than grouping by the whole-sale
+            // paymentMethod field, so a split-tender sale's cash/card/etc
+            // portions each land in their real bucket instead of an opaque
+            // 'split' one. Reports gross amounts at sale time — a return
+            // doesn't say which original payment line it reduces, so
+            // attributing a refund back across split lines isn't attempted
+            // here (refunds are already visible in the returns/refund
+            // reporting elsewhere). `count` is now "how many times this
+            // method was used as a tender line", which for the common
+            // single-method sale is identical to "how many sales used it".
             Sale.aggregate([
                 { $match: { createdAt: { $gte: rangeStart } } },
+                { $unwind: '$payments' },
                 {
                     $group: {
-                        _id:   '$paymentMethod',
-                        total: { $sum: NET_AMOUNT },
+                        _id:   '$payments.method',
+                        total: { $sum: '$payments.amount' },
                         count: { $sum: 1 },
                     },
                 },

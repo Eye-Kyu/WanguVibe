@@ -8,11 +8,12 @@ const storeCreditLedgerSchema = new mongoose.Schema({
   amount: { type: Number, required: true }, // positive = credit, negative = debit
   reason: {
     type: String,
-    enum: ['return_refund', 'checkout_payment', 'manual_adjustment'],
+    enum: ['return_refund', 'checkout_payment', 'manual_adjustment', 'layaway_payment', 'layaway_refund'],
     required: true,
   },
   relatedSale: { type: mongoose.Schema.Types.ObjectId, ref: 'Sale', default: null },
   relatedReturn: { type: mongoose.Schema.Types.ObjectId, default: null }, // _id of the Sale.returns[] subdoc
+  relatedLayaway: { type: mongoose.Schema.Types.ObjectId, ref: 'Layaway', default: null },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now },
 });

@@ -4,7 +4,12 @@ const { initiateStkPush } = require('../services/mpesa');
 const { finalizeSale } = require('./salesController');
 const { logAudit } = require('../utils/auditLogger');
 
-const STALE_PENDING_MS = 90 * 1000; // no scheduler in this app to sweep these proactively — checked lazily on read
+// Also used by services/scheduledJobs.js's proactive sweep — this lazy
+// check on read still runs too, so a client that's actively polling sees a
+// pending payment flip to timed_out immediately rather than waiting for the
+// next sweep tick.
+const STALE_PENDING_MS = 90 * 1000;
+exports.STALE_PENDING_MS = STALE_PENDING_MS;
 
 // POST /api/payments/mpesa/initiate — starts an STK push and holds the cart
 // as a snapshot until Safaricom's callback confirms or denies the payment.

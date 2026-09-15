@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const pinoHttp = require('pino-http');
 const connectDB = require('./config/db');
 const { globalLimiter } = require('./middleware/rateLimiters');
+const { startScheduledJobs } = require('./services/scheduledJobs');
 const logger = require('./utils/logger');
 
 // A crash outside any request (a bad timer callback, an unawaited rejected
@@ -37,6 +38,9 @@ const shiftRoutes = require('./routes/shifts');
 const giftcardRoutes = require('./routes/giftcards');
 const paymentsRoutes = require('./routes/payments');
 const etimsRoutes = require('./routes/etims');
+const layawayRoutes = require('./routes/layaways');
+const supplierRoutes = require('./routes/suppliers');
+const purchaseOrderRoutes = require('./routes/purchaseOrders');
 
 
 connectDB();
@@ -68,6 +72,9 @@ app.use('/api/shifts', shiftRoutes);
 app.use('/api/giftcards', giftcardRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/etims', etimsRoutes);
+app.use('/api/layaways', layawayRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
 
 //admin assigns role
@@ -81,6 +88,18 @@ app.use('/api/audit', auditRoutes);
 // Test route
 app.get('/', (req, res) => res.send('POS API Running'));
 
+// GET /health — for uptime monitors (UptimeRobot/Better Uptime/etc). Checks
+// actual DB connectivity rather than just "the process is alive", since a
+// dropped Mongo connection is the failure mode that matters most here.
+app.get('/health', (req, res) => {
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    status: dbConnected ? 'ok' : 'degraded',
+    db: mongoose.STATES[mongoose.connection.readyState],
+    uptimeSeconds: Math.round(process.uptime()),
+  });
+});
+
 // Every controller already catches its own errors and reports them via
 // reportError() (both pino + Sentry) — this is only a safety net for
 // anything that somehow still escapes a route handler uncaught.
@@ -88,4 +107,7 @@ Sentry.setupExpressErrorHandler(app);
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+  startScheduledJobs();
+});

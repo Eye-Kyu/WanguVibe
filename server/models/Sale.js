@@ -48,10 +48,39 @@ const saleSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  // Denormalized summary: payments[0].method when there's exactly one
+  // payment line, else 'split'. Kept so every existing query/report/UI that
+  // reads this flat field (shift cash reconciliation, dashboard breakdown,
+  // the receipt) keeps working unchanged for the single-method case, which
+  // is still the overwhelming majority of sales — payments[] below is the
+  // actual source of truth.
   paymentMethod: {
     type: String,
-    enum: ['cash', 'mpesa', 'card', 'store_credit', 'gift_card'],
+    enum: ['cash', 'mpesa', 'card', 'store_credit', 'gift_card', 'split'],
     default: 'cash'
+  },
+  // One entry per payment method used on this sale. Almost always length 1;
+  // length > 1 is a split-tender sale (any mix of cash/card/store_credit/
+  // gift_card — M-Pesa can't be split in with others since its STK-push
+  // confirmation is asynchronous, see finalizeSale). customer/giftCardCode
+  // are only meaningful on a store_credit/gift_card line respectively.
+  payments: {
+    type: [
+      {
+        method: {
+          type: String,
+          enum: ['cash', 'mpesa', 'card', 'store_credit', 'gift_card'],
+          required: true
+        },
+        amount: { type: Number, required: true },
+        customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
+        giftCardCode: { type: String, default: null }
+      }
+    ],
+    validate: {
+      validator: (v) => Array.isArray(v) && v.length > 0,
+      message: 'A sale must have at least one payment line'
+    }
   },
   // Gift cards SOLD as a line item in this sale — separate from items[]
   // since a gift card isn't a Style/Variant and never touches stock.

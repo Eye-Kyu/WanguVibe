@@ -20,6 +20,8 @@
       "orderDiscount": "Punguzo la Agizo (%)",
       "deductedFromOrder": "−KES {{amount}} imepunguzwa kwenye agizo",
       "paymentMethod": "Njia ya Malipo",
+      "splitToggleOn": "Gawanya malipo",
+      "splitToggleOff": "Njia moja",
       "cash": "Fedha Taslimu",
       "mpesa": "M-Pesa",
       "card": "Kadi",

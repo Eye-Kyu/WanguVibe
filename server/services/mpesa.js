@@ -67,7 +67,11 @@ async function initiateStkPush({ phone, amount, accountReference, simulateFailur
     const merchantRequestId = randomId('mock_merchant_');
 
     setTimeout(() => {
-      const callbackUrl = `http://localhost:${process.env.PORT || 5000}/api/payments/mpesa/callback`;
+      // Hardcoding localhost here would silently break the mock flow the
+      // moment this ran as anything other than a single instance on this
+      // machine (a real deployment, a second replica, etc). MPESA_CALLBACK_URL
+      // is already the real-mode config for exactly this address — reuse it.
+      const callbackUrl = process.env.MPESA_CALLBACK_URL || `http://localhost:${process.env.PORT || 5000}/api/payments/mpesa/callback`;
       const body = mockCallbackBody({ checkoutRequestId, merchantRequestId, amount, phone, simulateFailure });
       fetch(callbackUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         .catch(err => reportError(null, err, 'Mock M-Pesa callback self-post failed'));

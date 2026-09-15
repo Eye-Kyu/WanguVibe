@@ -20,6 +20,8 @@
       "orderDiscount": "Order Discount (%)",
       "deductedFromOrder": "−KES {{amount}} deducted from order",
       "paymentMethod": "Payment Method",
+      "splitToggleOn": "Split payment",
+      "splitToggleOff": "Single method",
       "cash": "Cash",
       "mpesa": "M-Pesa",
       "card": "Card",

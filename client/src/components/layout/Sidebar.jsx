@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     IconHome, IconReceipt, IconHanger, IconUsers, IconBox,
-    IconClipboard, IconClock, IconGift, IconRefresh, IconUser, IconChevronLeft,
+    IconClipboard, IconClock, IconGift, IconRefresh, IconUser, IconChevronLeft, IconTag,
+    IconPhone, IconCart,
 } from '../icons';
 
 const NAV_ITEMS = [
@@ -12,9 +13,12 @@ const NAV_ITEMS = [
     { to: '/admin/styles', label: 'Styles', Icon: IconHanger },
     { to: '/admin/customers', label: 'Customers', Icon: IconUsers },
     { to: '/admin/inventory', label: 'Inventory', Icon: IconBox },
+    { to: '/admin/suppliers', label: 'Suppliers', Icon: IconPhone },
+    { to: '/admin/purchase-orders', label: 'Purchase Orders', Icon: IconCart },
     { to: '/admin/audit', label: 'Audit Log', Icon: IconClipboard },
     { to: '/admin/shifts', label: 'Shifts', Icon: IconClock },
     { to: '/admin/giftcards', label: 'Gift Cards', Icon: IconGift },
+    { to: '/admin/layaways', label: 'Layaways', Icon: IconTag },
     { to: '/admin/etims', label: 'eTIMS Retry', Icon: IconRefresh },
     { to: '/admin/users', label: 'Users', Icon: IconUser },
 ];

@@ -418,3 +418,161 @@ describe('finalizeSale — selling gift cards as line items', () => {
     expect(sale.totalAmount).toBe(2500);
   });
 });
+
+describe('finalizeSale — split-tender payments', () => {
+  let cashier;
+  beforeEach(async () => {
+    cashier = (await makeUser()).id;
+  });
+
+  test('a 2-line cash+card split is accepted and persisted, paymentMethod becomes "split"', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    const sale = await finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [{ method: 'cash', amount: 600 }, { method: 'card', amount: 400 }],
+      cashier,
+    });
+
+    expect(sale.paymentMethod).toBe('split');
+    expect(sale.payments).toHaveLength(2);
+    expect(sale.payments.map((p) => p.method).sort()).toEqual(['card', 'cash']);
+  });
+
+  test('a 3-line split combining cash, card, and store credit runs the store-credit atomic guard correctly', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    const customer = await makeCustomer({ storeCreditBalance: 500 });
+
+    const sale = await finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [
+        { method: 'cash', amount: 300 },
+        { method: 'card', amount: 400 },
+        { method: 'store_credit', amount: 300, customer: customer._id },
+      ],
+      cashier,
+    });
+
+    expect(sale.paymentMethod).toBe('split');
+    expect(sale.payments).toHaveLength(3);
+
+    const updatedCustomer = await Customer.findById(customer._id);
+    expect(updatedCustomer.storeCreditBalance).toBe(200); // 500 - 300
+
+    const ledgerEntry = await StoreCreditLedger.findOne({ customer: customer._id });
+    expect(ledgerEntry.amount).toBe(-300);
+  });
+
+  test('a split combining store credit and a gift card runs both atomic guards, each against its own line amount', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    const customer = await makeCustomer({ storeCreditBalance: 1000 });
+    const card = await makeGiftCard({ currentBalance: 1000 });
+
+    const sale = await finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [
+        { method: 'store_credit', amount: 700, customer: customer._id },
+        { method: 'gift_card', amount: 300, giftCardCode: card.code },
+      ],
+      cashier,
+    });
+
+    expect(sale.giftCardRedeemed.amount).toBe(300);
+
+    const updatedCustomer = await Customer.findById(customer._id);
+    expect(updatedCustomer.storeCreditBalance).toBe(300); // 1000 - 700
+
+    const updatedCard = await GiftCard.findById(card._id);
+    expect(updatedCard.currentBalance).toBe(700); // 1000 - 300
+  });
+
+  test('rejects a split whose line amounts do not sum to the declared total', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    await expect(finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [{ method: 'cash', amount: 300 }, { method: 'card', amount: 300 }],
+      cashier,
+    })).rejects.toThrow(/Payment amounts do not sum to the total amount/);
+  });
+
+  test('rejects a split that includes M-Pesa alongside another method', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    await expect(finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [{ method: 'mpesa', amount: 500 }, { method: 'cash', amount: 500 }],
+      cashier,
+    })).rejects.toThrow(/M-Pesa cannot be combined/);
+  });
+
+  test('rejects two store-credit lines in one split', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    const customer = await makeCustomer({ storeCreditBalance: 1000 });
+    await expect(finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [
+        { method: 'store_credit', amount: 500, customer: customer._id },
+        { method: 'store_credit', amount: 500, customer: customer._id },
+      ],
+      cashier,
+    })).rejects.toThrow(/Only one store-credit payment line/);
+  });
+
+  test('rejects two gift-card lines in one split', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    const cardA = await makeGiftCard({ currentBalance: 500 });
+    const cardB = await makeGiftCard({ currentBalance: 500 });
+    await expect(finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [
+        { method: 'gift_card', amount: 500, giftCardCode: cardA.code },
+        { method: 'gift_card', amount: 500, giftCardCode: cardB.code },
+      ],
+      cashier,
+    })).rejects.toThrow(/Only one gift-card payment line/);
+  });
+
+  test('rejects a split line with a zero/negative amount', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    await expect(finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [{ method: 'cash', amount: 1000 }, { method: 'card', amount: 0 }],
+      cashier,
+    })).rejects.toThrow(/amount greater than 0/);
+  });
+
+  test('rejects insufficient store credit within a split, rolling back the whole transaction', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 }, { stock: 5 });
+    const customer = await makeCustomer({ storeCreditBalance: 100 });
+
+    await expect(finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [{ method: 'cash', amount: 500 }, { method: 'store_credit', amount: 500, customer: customer._id }],
+      cashier,
+    })).rejects.toThrow(/Insufficient store credit balance/);
+
+    const unchangedVariant = await Variant.findById(variant._id);
+    expect(unchangedVariant.stock).toBe(5);
+    const unchangedCustomer = await Customer.findById(customer._id);
+    expect(unchangedCustomer.storeCreditBalance).toBe(100);
+  });
+
+  test('a single-element payments array behaves exactly like the legacy flat paymentMethod (paymentMethod is not "split")', async () => {
+    const { variant } = await makeStyleWithVariant({ basePrice: 1000 });
+    const sale = await finalizeSale({
+      items: [{ variant: variant._id, quantity: 1, discount: 0 }],
+      totalAmount: 1000,
+      payments: [{ method: 'cash', amount: 1000 }],
+      cashier,
+    });
+    expect(sale.paymentMethod).toBe('cash');
+    expect(sale.payments).toHaveLength(1);
+  });
+});

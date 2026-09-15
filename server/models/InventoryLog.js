@@ -12,8 +12,13 @@ const inventoryLogSchema = new mongoose.Schema({
     },
     action: {
         type: String,
-        enum: ['restock', 'adjustment'],
+        enum: ['restock', 'adjustment', 'purchase_order'],
         required: true
+    },
+    relatedPurchaseOrder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PurchaseOrder',
+        default: null
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
