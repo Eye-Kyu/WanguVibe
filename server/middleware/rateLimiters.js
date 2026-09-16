@@ -21,4 +21,16 @@ const moneyMovingLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down and try again shortly.' },
 });
 
-module.exports = { globalLimiter, moneyMovingLimiter };
+// For public, unauthenticated self-service lookups (e.g. a customer checking
+// their own store-credit/gift-card balance) — fundamentally different risk
+// profile from every other route in this app (no auth at all gates it), so
+// it gets its own tighter-than-globalLimiter ceiling per IP.
+const publicLookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+});
+
+module.exports = { globalLimiter, moneyMovingLimiter, publicLookupLimiter };

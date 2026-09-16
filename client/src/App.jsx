@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import BalanceCheckPage from './pages/BalanceCheckPage';
 import POSPage from './pages/POSPage';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -15,6 +16,11 @@ import EtimsRetryPage from './pages/admin/EtimsRetryPage';
 import LayawaysPage from './pages/admin/LayawaysPage';
 import SuppliersPage from './pages/admin/SuppliersPage';
 import PurchaseOrdersPage from './pages/admin/PurchaseOrdersPage';
+import MarginReportPage from './pages/admin/MarginReportPage';
+import ForecastPage from './pages/admin/ForecastPage';
+import AnalyticsPage from './pages/admin/AnalyticsPage';
+import WebhooksPage from './pages/admin/WebhooksPage';
+import ApiKeysPage from './pages/admin/ApiKeysPage';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 //import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -30,6 +36,7 @@ function App() {
       <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/balance" element={<BalanceCheckPage />} />
         <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
 
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
@@ -44,6 +51,11 @@ function App() {
           <Route path="layaways" element={<LayawaysPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="margins" element={<MarginReportPage />} />
+          <Route path="forecast" element={<ForecastPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="webhooks" element={<WebhooksPage />} />
+          <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="etims" element={<EtimsRetryPage />} />
           <Route path="users" element={<UsersPage />} />
         </Route>

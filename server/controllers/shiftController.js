@@ -2,6 +2,11 @@ const Shift = require('../models/Shift');
 const { reportError } = require('../utils/reportError');
 const Sale = require('../models/Sale');
 const { logAudit } = require('../utils/auditLogger');
+const { notifyAdmins } = require('../services/pushNotifications');
+
+// Below this, a mis-count is just normal till-handling noise (customers
+// short-changed and corrected, coin rounding, etc) — not worth paging an admin.
+const SHIFT_DISCREPANCY_ALERT_THRESHOLD = 200;
 
 // POST /api/shifts/open — start a till session for the caller.
 exports.openShift = async (req, res) => {
@@ -93,6 +98,16 @@ exports.closeShift = async (req, res) => {
       details: { shiftId: shift._id, closingCount, expectedCash, discrepancy },
       userId: req.user.id,
     });
+
+    if (Math.abs(discrepancy) >= SHIFT_DISCREPANCY_ALERT_THRESHOLD) {
+      const direction = discrepancy > 0 ? 'over' : 'short';
+      notifyAdmins({
+        title: 'Shift discrepancy',
+        body: `${req.user.name || 'A cashier'}'s shift closed KES ${Math.abs(discrepancy).toFixed(2)} ${direction}`,
+        tag: 'shift-discrepancy',
+        data: { url: '/admin/shifts' },
+      }).catch((err) => reportError(req, err, 'Failed to send shift-discrepancy notification'));
+    }
 
     res.json(shift);
   } catch (err) {

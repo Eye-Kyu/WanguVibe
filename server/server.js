@@ -41,6 +41,12 @@ const etimsRoutes = require('./routes/etims');
 const layawayRoutes = require('./routes/layaways');
 const supplierRoutes = require('./routes/suppliers');
 const purchaseOrderRoutes = require('./routes/purchaseOrders');
+const stockEventsRoutes = require('./routes/stockEvents');
+const pushSubscriptionRoutes = require('./routes/pushSubscriptions');
+const publicLookupRoutes = require('./routes/publicLookup');
+const webhookRoutes = require('./routes/webhooks');
+const apiKeyRoutes = require('./routes/apiKeys');
+const publicApiRoutes = require('./routes/publicApi');
 
 
 connectDB();
@@ -75,6 +81,12 @@ app.use('/api/etims', etimsRoutes);
 app.use('/api/layaways', layawayRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/stock-events', stockEventsRoutes);
+app.use('/api/push-subscriptions', pushSubscriptionRoutes);
+app.use('/api/public', publicLookupRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api/v1', publicApiRoutes);
 
 
 //admin assigns role

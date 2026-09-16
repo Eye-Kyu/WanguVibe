@@ -167,6 +167,87 @@ async function main() {
         await hit('Delete temp cashier', 'DELETE', `/users/${cashierUser._id}`, { token: adminToken });
     }
 
+    // ── Margin report ────────────────────────────────────────────────────
+    // A real sale (known price/cost/qty) against the real server + DB, then
+    // check that specific style's own row in the report — NOT the report's
+    // grand totals, which necessarily aggregate every other sale this whole
+    // script run (and any other real traffic) makes within "today".
+    {
+        await hit('Margin report — no token rejected', 'GET', '/dashboard/margins', { expect: [401] });
+
+        const marginStyleForm = new FormData();
+        marginStyleForm.append('name', 'Smoke Test Margin Style');
+        marginStyleForm.append('basePrice', '1000');
+        marginStyleForm.append('costPrice', '300');
+        marginStyleForm.append('category', 'Smoke Test Category');
+        marginStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `MARGIN-${Date.now()}`, stock: 10 }]));
+        const marginStyle = await hit('Create style for margin-report test (temp)', 'POST', '/styles', { token: adminToken, form: marginStyleForm, expect: [201] });
+        const marginVariant = marginStyle?.variants?.[0];
+
+        let marginSale = null;
+        if (marginVariant?._id) {
+            // 2 units @ 1000, no discount -> revenue 2000, cost 300*2=600, grossProfit 1400
+            marginSale = await hit('Create sale for margin-report test', 'POST', '/sales', {
+                token: adminToken,
+                json: { items: [{ variant: marginVariant._id, quantity: 2, discount: 0 }], totalAmount: 2000, paymentMethod: 'cash' },
+                expect: [201],
+            });
+
+            const report = await hit('Margin report (day)', 'GET', '/dashboard/margins?range=day', { token: adminToken });
+            const styleRow = report?.byStyle?.find((r) => r.name === 'Smoke Test Margin Style');
+            const rowOk = styleRow?.revenue === 2000 && styleRow?.cost === 600 && styleRow?.grossProfit === 1400 && styleRow?.category === 'Smoke Test Category';
+            results.push({ label: 'Margin report byStyle row matches known price/cost/qty (revenue 2000, cost 600, grossProfit 1400)', method: '-', path: '-', status: rowOk ? 'ok' : JSON.stringify(styleRow), ok: rowOk, ms: 0 });
+            rowOk ? passCount++ : failCount++;
+
+            const categoryRow = report?.byCategory?.find((r) => r.category === 'Smoke Test Category');
+            const categoryOk = categoryRow?.revenue === 2000 && categoryRow?.cost === 600 && categoryRow?.grossProfit === 1400;
+            results.push({ label: 'Margin report byCategory row matches the same sale', method: '-', path: '-', status: categoryOk ? 'ok' : JSON.stringify(categoryRow), ok: categoryOk, ms: 0 });
+            categoryOk ? passCount++ : failCount++;
+        }
+
+        if (cashierToken) {
+            await hit('Role gate — cashier blocked from GET /dashboard/margins', 'GET', '/dashboard/margins', { token: cashierToken, expect: [403] });
+        }
+
+        if (marginSale?._id) await hit('Cleanup: delete margin-report sale', 'DELETE', `/sales/${marginSale._id}`, { token: adminToken });
+        if (marginStyle?._id) await hit('Cleanup: delete margin-report style', 'DELETE', `/styles/${marginStyle._id}`, { token: adminToken });
+    }
+
+    // ── Reorder forecast ─────────────────────────────────────────────────
+    // A real sale (known quantity, sold "now" so it's always within the
+    // 30-day window) against the real server + DB, then check that specific
+    // variant's own row for exact velocity/daysUntilStockout/reorder math.
+    {
+        await hit('Reorder forecast — no token rejected', 'GET', '/variants/forecast', { expect: [401] });
+
+        const forecastStyleForm = new FormData();
+        forecastStyleForm.append('name', 'Smoke Test Forecast Style');
+        forecastStyleForm.append('basePrice', '500');
+        // Starting stock 40, sell 30 -> 10 left. velocity = 30/30-day window = 1/day.
+        // daysUntilStockout = 10/1 = 10. suggestedReorderQty = ceil(1*14)-10 = 4.
+        forecastStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `FORECAST-${Date.now()}`, stock: 40 }]));
+        const forecastStyle = await hit('Create style for forecast test (temp)', 'POST', '/styles', { token: adminToken, form: forecastStyleForm, expect: [201] });
+        const forecastVariant = forecastStyle?.variants?.[0];
+
+        let forecastSale = null;
+        if (forecastVariant?._id) {
+            forecastSale = await hit('Create sale for forecast test (30 units)', 'POST', '/sales', {
+                token: adminToken,
+                json: { items: [{ variant: forecastVariant._id, quantity: 30, discount: 0 }], totalAmount: 15000, paymentMethod: 'cash' },
+                expect: [201],
+            });
+
+            const forecast = await hit('Reorder forecast', 'GET', '/variants/forecast', { token: adminToken });
+            const row = forecast?.forecast?.find((r) => r.variantId === forecastVariant._id);
+            const rowOk = row?.unitsSoldInWindow === 30 && row?.velocityPerDay === 1 && row?.daysUntilStockout === 10 && row?.suggestedReorderQty === 4;
+            results.push({ label: 'Reorder forecast row matches known velocity/stockout/reorder math (1/day, 10 days left, reorder 4)', method: '-', path: '-', status: rowOk ? 'ok' : JSON.stringify(row), ok: rowOk, ms: 0 });
+            rowOk ? passCount++ : failCount++;
+        }
+
+        if (forecastSale?._id) await hit('Cleanup: delete forecast-test sale', 'DELETE', `/sales/${forecastSale._id}`, { token: adminToken });
+        if (forecastStyle?._id) await hit('Cleanup: delete forecast-test style', 'DELETE', `/styles/${forecastStyle._id}`, { token: adminToken });
+    }
+
     // /admin/create-user (separate admin-only user-creation path)
     const adminCreated = await hit('Admin create-user (temp)', 'POST', '/admin/create-user', {
         token: adminToken,
@@ -355,6 +436,13 @@ async function main() {
             results.push({ label: 'Store credit balance = 400 after checkout payment', method: '-', path: '-', status: debitOk ? 'ok' : afterDebit?.storeCreditBalance, ok: debitOk, ms: 0 });
             debitOk ? passCount++ : failCount++;
 
+            // Public, unauthenticated self-service balance checker — no token at all
+            const publicCredit = await hit('Public store-credit lookup — no token needed', 'GET', `/public/store-credit?phone=${encodeURIComponent(creditCustomer.phone)}`, {});
+            const publicCreditOk = publicCredit?.storeCreditBalance === 400 && publicCredit?.name === creditCustomer.name && publicCredit?.notes === undefined && publicCredit?.phone === undefined;
+            results.push({ label: 'Public store-credit lookup returns balance 400 and only minimal safe fields', method: '-', path: '-', status: publicCreditOk ? 'ok' : JSON.stringify(publicCredit), ok: publicCreditOk, ms: 0 });
+            publicCreditOk ? passCount++ : failCount++;
+            await hit('Public store-credit lookup — unknown phone 404s', 'GET', `/public/store-credit?phone=0700000000-nonexistent`, { expect: [404] });
+
             // Attempt to overspend the remaining 400 balance
             await hit('Store credit payment exceeding balance rejected', 'POST', '/sales', {
                 token: adminToken,
@@ -419,6 +507,13 @@ async function main() {
             results.push({ label: 'Gift card balance = 600 after partial redemption', method: '-', path: '-', status: lookup2Ok ? 'ok' : JSON.stringify(lookup2), ok: lookup2Ok, ms: 0 });
             lookup2Ok ? passCount++ : failCount++;
 
+            // Public, unauthenticated self-service balance checker — no token at all
+            const publicGift = await hit('Public gift-card lookup — no token needed', 'GET', `/public/gift-card?code=${giftCode.toLowerCase()}`, {});
+            const publicGiftOk = publicGift?.currentBalance === 600 && publicGift?.status === 'active' && publicGift?.code === giftCode && publicGift?._id === undefined;
+            results.push({ label: 'Public gift-card lookup returns balance 600 and only minimal safe fields', method: '-', path: '-', status: publicGiftOk ? 'ok' : JSON.stringify(publicGift), ok: publicGiftOk, ms: 0 });
+            publicGiftOk ? passCount++ : failCount++;
+            await hit('Public gift-card lookup — unknown code 404s', 'GET', `/public/gift-card?code=NOSUCHCODE`, { expect: [404] });
+
             // No split-tender: a sale total exceeding the remaining balance is rejected outright
             await hit('Gift card redemption exceeding balance rejected (no split-tender)', 'POST', '/sales', {
                 token: adminToken,
@@ -468,6 +563,90 @@ async function main() {
     if (giftSaleRedeem1?._id) await hit('Cleanup: delete gift-card-redemption sale', 'DELETE', `/sales/${giftSaleRedeem1._id}`, { token: adminToken });
     if (giftSaleSell?._id) await hit('Cleanup: delete gift-card-sale sale', 'DELETE', `/sales/${giftSaleSell._id}`, { token: adminToken });
     if (giftStyle?._id) await hit('Cleanup: delete gift-card-test style', 'DELETE', `/styles/${giftStyle._id}`, { token: adminToken });
+
+    // ── Richer analytics (customer value / staff performance / cohorts) ──
+    {
+        const analyticsCustomer = await hit('Create customer for analytics test (temp)', 'POST', '/customers', {
+            token: adminToken,
+            json: { name: 'Analytics Test Customer', phone: `07${Date.now()}`.slice(0, 12) },
+            expect: [201],
+        });
+
+        const analyticsCashierReg = await hit('Register cashier for analytics test (temp)', 'POST', '/auth/register', {
+            token: adminToken,
+            json: { name: 'Analytics Test Cashier', username: `analytics_cashier_${Date.now()}`, password: 'password123', role: 'cashier' },
+            expect: [201],
+        });
+        const analyticsUsers = analyticsCashierReg && await hit('List users (find analytics cashier)', 'GET', '/users', { token: adminToken });
+        const analyticsCashierUser = analyticsUsers?.find(u => u.name === 'Analytics Test Cashier');
+        let analyticsCashierToken = null;
+        if (analyticsCashierUser) {
+            const login = await hit('Login as analytics cashier', 'POST', '/auth/login', {
+                json: { username: analyticsUsers.find(u => u._id === analyticsCashierUser._id)?.username, password: 'password123' },
+            });
+            analyticsCashierToken = login?.token;
+        }
+
+        const analyticsStyleForm = new FormData();
+        analyticsStyleForm.append('name', 'Analytics Test Item');
+        analyticsStyleForm.append('basePrice', '1000');
+        analyticsStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `ANALYTICS-${Date.now()}`, stock: 10 }]));
+        const analyticsStyle = await hit('Create style for analytics test (temp)', 'POST', '/styles', { token: adminToken, form: analyticsStyleForm, expect: [201] });
+        const analyticsVariant = analyticsStyle?.variants?.[0];
+
+        let analyticsSale1 = null, analyticsSale2 = null;
+        if (analyticsVariant?._id && analyticsCustomer?._id) {
+            // Sale 1: admin, customer attached -> feeds customer-value + admin's staff-performance row + this month's cohort
+            analyticsSale1 = await hit('Create sale 1 for analytics test (admin, customer attached)', 'POST', '/sales', {
+                token: adminToken,
+                json: { items: [{ variant: analyticsVariant._id, quantity: 1, discount: 0 }], totalAmount: 1000, paymentMethod: 'cash', customer: analyticsCustomer._id },
+                expect: [201],
+            });
+
+            if (analyticsCashierToken) {
+                // Sale 2: temp cashier, no customer -> feeds only that cashier's staff-performance row.
+                // 50% discount on the same 1000 base price gives a distinct, easy-to-assert total (500)
+                // without needing a second style/variant just for a different price point.
+                analyticsSale2 = await hit('Create sale 2 for analytics test (temp cashier, no customer)', 'POST', '/sales', {
+                    token: analyticsCashierToken,
+                    json: { items: [{ variant: analyticsVariant._id, quantity: 1, discount: 50 }], totalAmount: 500, paymentMethod: 'cash' },
+                    expect: [201],
+                });
+            }
+
+            const customerValue = await hit('Customer value report', 'GET', '/dashboard/customer-value', { token: adminToken });
+            const cvRow = customerValue?.customers?.find(c => c.customerId === analyticsCustomer._id);
+            const cvOk = cvRow?.totalSpend === 1000 && cvRow?.orderCount === 1 && cvRow?.name === 'Analytics Test Customer';
+            results.push({ label: 'Customer value report shows correct spend/orderCount for known customer', method: '-', path: '-', status: cvOk ? 'ok' : JSON.stringify(cvRow), ok: cvOk, ms: 0 });
+            cvOk ? passCount++ : failCount++;
+
+            const staffPerf = await hit('Staff performance report (day)', 'GET', '/dashboard/staff-performance?range=day', { token: adminToken });
+            const cashierRow = analyticsCashierUser && staffPerf?.staff?.find(s => s.cashierId === analyticsCashierUser._id);
+            const staffOk = cashierRow?.revenue === 500 && cashierRow?.transactionCount === 1 && cashierRow?.name === 'Analytics Test Cashier';
+            results.push({ label: 'Staff performance report shows correct revenue for known cashier', method: '-', path: '-', status: staffOk ? 'ok' : JSON.stringify(cashierRow), ok: staffOk, ms: 0 });
+            staffOk ? passCount++ : failCount++;
+
+            const cohorts = await hit('Cohort retention report', 'GET', '/dashboard/cohorts', { token: adminToken });
+            const now = new Date();
+            const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const cohort = cohorts?.cohorts?.find(c => c.cohortMonth === thisMonth);
+            const cohortOk = cohort && cohort.cohortSize >= 1 && cohort.retention.some(r => r.monthOffset === 0 && r.customersReturned === cohort.cohortSize);
+            results.push({ label: 'Cohort report includes this-month cohort with monthOffset 0 = cohortSize', method: '-', path: '-', status: cohortOk ? 'ok' : JSON.stringify(cohort), ok: cohortOk, ms: 0 });
+            cohortOk ? passCount++ : failCount++;
+
+            if (cashierToken) {
+                await hit('Role gate — cashier blocked from GET /dashboard/customer-value', 'GET', '/dashboard/customer-value', { token: cashierToken, expect: [403] });
+                await hit('Role gate — cashier blocked from GET /dashboard/staff-performance', 'GET', '/dashboard/staff-performance', { token: cashierToken, expect: [403] });
+                await hit('Role gate — cashier blocked from GET /dashboard/cohorts', 'GET', '/dashboard/cohorts', { token: cashierToken, expect: [403] });
+            }
+        }
+
+        if (analyticsSale2?._id) await hit('Cleanup: delete analytics sale 2', 'DELETE', `/sales/${analyticsSale2._id}`, { token: adminToken });
+        if (analyticsSale1?._id) await hit('Cleanup: delete analytics sale 1', 'DELETE', `/sales/${analyticsSale1._id}`, { token: adminToken });
+        if (analyticsStyle?._id) await hit('Cleanup: delete analytics-test style', 'DELETE', `/styles/${analyticsStyle._id}`, { token: adminToken });
+        if (analyticsCustomer?._id) await hit('Cleanup: delete analytics-test customer', 'DELETE', `/customers/${analyticsCustomer._id}`, { token: adminToken });
+        if (analyticsCashierUser) await hit('Cleanup: delete analytics-test cashier user', 'DELETE', `/users/${analyticsCashierUser._id}`, { token: adminToken });
+    }
 
     // ── Split-tender payments ───────────────────────────────────────────
     const splitStyleForm = new FormData();
@@ -882,6 +1061,245 @@ async function main() {
     if (etimsGoodSale?._id) await hit('Cleanup: delete eTIMS-accepted sale', 'DELETE', `/sales/${etimsGoodSale._id}`, { token: adminToken });
     if (etimsBadSale?._id) await hit('Cleanup: delete eTIMS-retry sale', 'DELETE', `/sales/${etimsBadSale._id}`, { token: adminToken });
     if (etimsStyle?._id) await hit('Cleanup: delete eTIMS-test style', 'DELETE', `/styles/${etimsStyle._id}`, { token: adminToken });
+
+    // ── Real-time stock sync (SSE) ──────────────────────────────────────
+    {
+        const sseStyleForm = new FormData();
+        sseStyleForm.append('name', 'Smoke Test SSE Style');
+        sseStyleForm.append('basePrice', '1000');
+        sseStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `SSE-${Date.now()}`, stock: 10, reorderThreshold: 1 }]));
+        const sseStyle = await hit('Create style for SSE test (temp)', 'POST', '/styles', { token: adminToken, form: sseStyleForm, expect: [201] });
+        const sseVariant = sseStyle?.variants?.[0];
+
+        if (sseVariant?._id) {
+            const events = [];
+            try {
+                const sseResponse = await fetch(`${API}/stock-events`, { headers: { Authorization: `Bearer ${adminToken}` } });
+                const reader = sseResponse.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                // Reads in the background — cancelled at the end, its rejection
+                // on cancel is expected and deliberately swallowed.
+                (async () => {
+                    try {
+                        for (;;) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            const parts = buffer.split('\n\n');
+                            buffer = parts.pop();
+                            for (const part of parts) {
+                                const line = part.split('\n').find((l) => l.startsWith('data: '));
+                                if (!line) continue;
+                                try { events.push(JSON.parse(line.slice(6))); } catch { /* not JSON (e.g. the ": connected" comment) */ }
+                            }
+                        }
+                    } catch { /* reader.cancel() below rejects the pending read — expected */ }
+                })();
+
+                await sleep(300); // let the SSE connection actually establish server-side
+
+                await hit('Restock variant (should trigger an SSE broadcast)', 'POST', '/inventory/restock', {
+                    token: adminToken,
+                    json: { variantId: sseVariant._id, quantity: 4 },
+                });
+
+                let found = null;
+                for (let i = 0; i < 15 && !found; i++) {
+                    found = events.find((e) => e.type === 'stock_update' && e.changes?.some((c) => c.variantId === sseVariant._id));
+                    if (!found) await sleep(200);
+                }
+
+                const changeForVariant = found?.changes.find((c) => c.variantId === sseVariant._id);
+                const sseOk = changeForVariant?.stock === 14; // 10 + 4
+                results.push({ label: 'SSE stock_update received with correct new stock (10 -> 14)', method: '-', path: '-', status: sseOk ? 'ok' : JSON.stringify(found), ok: sseOk, ms: 0 });
+                sseOk ? passCount++ : failCount++;
+
+                reader.cancel().catch(() => {});
+            } catch (err) {
+                results.push({ label: 'SSE connection', method: '-', path: '-', status: `error: ${err.message}`, ok: false, ms: 0 });
+                failCount++;
+            }
+        }
+
+        if (sseStyle?._id) await hit('Cleanup: delete SSE-test style', 'DELETE', `/styles/${sseStyle._id}`, { token: adminToken });
+    }
+
+    // ── Push notification subscriptions ─────────────────────────────────
+    // Actual push delivery can't be exercised from Node (it needs a real
+    // browser + push-service round trip) — this just verifies the HTTP
+    // round trip: the VAPID public key is exposed, subscribe/unsubscribe
+    // upsert and delete real DB rows, and role-gating is enforced.
+    {
+        const vapid = await hit('Get VAPID public key', 'GET', '/push-subscriptions/vapid-public-key', { token: adminToken });
+        results.push({ label: 'VAPID public key present when configured', method: '-', path: '-', status: vapid?.publicKey ? 'ok' : 'missing', ok: Boolean(vapid?.publicKey), ms: 0 });
+        vapid?.publicKey ? passCount++ : failCount++;
+
+        if (cashierToken) {
+            await hit('Role gate — cashier blocked from POST /push-subscriptions', 'POST', '/push-subscriptions', {
+                token: cashierToken,
+                json: { endpoint: 'https://push.example/smoke-cashier', keys: { p256dh: 'a', auth: 'b' } },
+                expect: [403],
+            });
+        }
+
+        const smokeEndpoint = `https://push.example/smoke-${Date.now()}`;
+        await hit('Subscribe to push notifications', 'POST', '/push-subscriptions', {
+            token: adminToken,
+            json: { endpoint: smokeEndpoint, keys: { p256dh: 'test-p256dh', auth: 'test-auth' } },
+            expect: [201],
+        });
+
+        // Re-subscribing the same endpoint upserts rather than erroring.
+        await hit('Re-subscribe same endpoint (upsert)', 'POST', '/push-subscriptions', {
+            token: adminToken,
+            json: { endpoint: smokeEndpoint, keys: { p256dh: 'test-p256dh', auth: 'test-auth' } },
+            expect: [201],
+        });
+
+        await hit('Reject subscribe with missing keys', 'POST', '/push-subscriptions', {
+            token: adminToken,
+            json: { endpoint: smokeEndpoint },
+            expect: [400],
+        });
+
+        await hit('Unsubscribe from push notifications', 'DELETE', '/push-subscriptions', {
+            token: adminToken,
+            json: { endpoint: smokeEndpoint },
+            expect: [200],
+        });
+    }
+
+    // ── Webhooks — real HTTP delivery to a throwaway local listener ──────
+    // This is the one webhook check this session insists on being genuinely
+    // end-to-end (same bar the SSE checkpoint set) rather than only Jest
+    // mocks: the smoke script itself spins up a real local HTTP server and
+    // confirms an actual signed POST arrives from the running server.
+    {
+        const http = require('http');
+        const crypto = require('crypto');
+        const receivedEvents = [];
+        const listener = http.createServer((req, res) => {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                receivedEvents.push({ signature: req.headers['x-webhook-signature'], body });
+                res.writeHead(200);
+                res.end('ok');
+            });
+        });
+        await new Promise((resolve) => listener.listen(0, '127.0.0.1', resolve));
+        const listenerUrl = `http://127.0.0.1:${listener.address().port}/hook`;
+
+        const webhook = await hit('Create webhook subscription (temp)', 'POST', '/webhooks', {
+            token: adminToken,
+            json: { url: listenerUrl, events: ['sale.completed', 'stock.changed'] },
+            expect: [201],
+        });
+
+        let webhookSale = null, webhookStyle = null;
+        if (webhook?.secret) {
+            const webhookStyleForm = new FormData();
+            webhookStyleForm.append('name', 'Webhook Test Style');
+            webhookStyleForm.append('basePrice', '500');
+            webhookStyleForm.append('variants', JSON.stringify([{ size: 'One Size', color: 'N/A', sku: `WEBHOOK-${Date.now()}`, stock: 10 }]));
+            webhookStyle = await hit('Create style for webhook test (temp)', 'POST', '/styles', { token: adminToken, form: webhookStyleForm, expect: [201] });
+            const webhookVariant = webhookStyle?.variants?.[0];
+
+            if (webhookVariant?._id) {
+                await hit('Restock variant (should trigger stock.changed webhook)', 'POST', '/inventory/restock', {
+                    token: adminToken,
+                    json: { variantId: webhookVariant._id, quantity: 5 },
+                });
+
+                webhookSale = await hit('Create sale (should trigger sale.completed webhook)', 'POST', '/sales', {
+                    token: adminToken,
+                    json: { items: [{ variant: webhookVariant._id, quantity: 1, discount: 0 }], totalAmount: 500, paymentMethod: 'cash' },
+                    expect: [201],
+                });
+
+                let attempts = 0;
+                while (receivedEvents.length < 2 && attempts < 20) {
+                    await sleep(200);
+                    attempts++;
+                }
+
+                const parsed = receivedEvents.map((e) => ({ ...e, parsedBody: JSON.parse(e.body) }));
+                const stockEvent = parsed.find((e) => e.parsedBody.event === 'stock.changed');
+                const saleEvent = parsed.find((e) => e.parsedBody.event === 'sale.completed');
+
+                const stockOk = !!stockEvent && stockEvent.parsedBody.data.changes.some((c) => c.variantId === webhookVariant._id);
+                results.push({ label: 'Webhook: real HTTP delivery of stock.changed received', method: '-', path: '-', status: stockOk ? 'ok' : JSON.stringify(stockEvent?.parsedBody), ok: stockOk, ms: 0 });
+                stockOk ? passCount++ : failCount++;
+
+                const saleOk = !!saleEvent && saleEvent.parsedBody.data.saleId === webhookSale?._id && saleEvent.parsedBody.data.totalAmount === 500;
+                results.push({ label: 'Webhook: real HTTP delivery of sale.completed received', method: '-', path: '-', status: saleOk ? 'ok' : JSON.stringify(saleEvent?.parsedBody), ok: saleOk, ms: 0 });
+                saleOk ? passCount++ : failCount++;
+
+                if (saleEvent) {
+                    const expectedSig = `sha256=${crypto.createHmac('sha256', webhook.secret).update(saleEvent.body).digest('hex')}`;
+                    const sigOk = saleEvent.signature === expectedSig;
+                    results.push({ label: 'Webhook: X-Webhook-Signature header is a correct HMAC of the body', method: '-', path: '-', status: sigOk ? 'ok' : saleEvent.signature, ok: sigOk, ms: 0 });
+                    sigOk ? passCount++ : failCount++;
+                }
+            }
+        }
+
+        if (cashierToken) {
+            await hit('Role gate — cashier blocked from POST /webhooks', 'POST', '/webhooks', { token: cashierToken, json: { url: 'https://example.com', events: ['sale.completed'] }, expect: [403] });
+        }
+        await hit('GET /webhooks — no token rejected', 'GET', '/webhooks', { expect: [401] });
+
+        if (webhookSale?._id) await hit('Cleanup: delete webhook-test sale', 'DELETE', `/sales/${webhookSale._id}`, { token: adminToken });
+        if (webhookStyle?._id) await hit('Cleanup: delete webhook-test style', 'DELETE', `/styles/${webhookStyle._id}`, { token: adminToken });
+        if (webhook?._id) await hit('Cleanup: delete webhook subscription', 'DELETE', `/webhooks/${webhook._id}`, { token: adminToken });
+        listener.close();
+    }
+
+    // ── API keys / public read API (/api/v1) ─────────────────────────────
+    {
+        const apiKeyResult = await hit('Create API key (temp)', 'POST', '/api-keys', { token: adminToken, json: { label: 'Smoke Test Integration' }, expect: [201] });
+        const rawApiKey = apiKeyResult?.key;
+
+        if (rawApiKey) {
+            const salesRes = await fetch(`${API}/v1/sales`, { headers: { 'X-API-Key': rawApiKey } });
+            const salesOk = salesRes.status === 200 && Array.isArray((await salesRes.json()).data);
+            results.push({ label: 'Public API: GET /v1/sales with valid key', method: 'GET', path: '/v1/sales', status: salesRes.status, ok: salesOk, ms: 0 });
+            salesOk ? passCount++ : failCount++;
+
+            const stylesRes = await fetch(`${API}/v1/styles`, { headers: { 'X-API-Key': rawApiKey } });
+            const stylesOk = stylesRes.status === 200;
+            results.push({ label: 'Public API: GET /v1/styles with valid key', method: 'GET', path: '/v1/styles', status: stylesRes.status, ok: stylesOk, ms: 0 });
+            stylesOk ? passCount++ : failCount++;
+
+            const variantsRes = await fetch(`${API}/v1/variants`, { headers: { 'X-API-Key': rawApiKey } });
+            const variantsOk = variantsRes.status === 200;
+            results.push({ label: 'Public API: GET /v1/variants with valid key', method: 'GET', path: '/v1/variants', status: variantsRes.status, ok: variantsOk, ms: 0 });
+            variantsOk ? passCount++ : failCount++;
+
+            const badKeyRes = await fetch(`${API}/v1/sales`, { headers: { 'X-API-Key': 'not-a-real-key' } });
+            const badKeyOk = badKeyRes.status === 401;
+            results.push({ label: 'Public API: invalid API key rejected (401)', method: 'GET', path: '/v1/sales', status: badKeyRes.status, ok: badKeyOk, ms: 0 });
+            badKeyOk ? passCount++ : failCount++;
+
+            const noKeyRes = await fetch(`${API}/v1/sales`);
+            const noKeyOk = noKeyRes.status === 401;
+            results.push({ label: 'Public API: missing API key rejected (401)', method: 'GET', path: '/v1/sales', status: noKeyRes.status, ok: noKeyOk, ms: 0 });
+            noKeyOk ? passCount++ : failCount++;
+
+            const openapiRes = await fetch(`${API}/v1/openapi.yaml`);
+            const openapiOk = openapiRes.status === 200;
+            results.push({ label: 'Public API: GET /v1/openapi.yaml served without auth', method: 'GET', path: '/v1/openapi.yaml', status: openapiRes.status, ok: openapiOk, ms: 0 });
+            openapiOk ? passCount++ : failCount++;
+
+            if (cashierToken) {
+                await hit('Role gate — cashier blocked from POST /api-keys', 'POST', '/api-keys', { token: cashierToken, json: { label: 'x' }, expect: [403] });
+            }
+        }
+
+        if (apiKeyResult?._id) await hit('Cleanup: revoke smoke-test API key', 'DELETE', `/api-keys/${apiKeyResult._id}`, { token: adminToken });
+    }
 
     // ── Audit — manual log endpoint ────────────────────────────────────
     await hit('Log audit action', 'POST', '/audit', { token: adminToken, json: { action: 'smoke_test', details: { note: 'automated smoke test run' } }, expect: [201] });

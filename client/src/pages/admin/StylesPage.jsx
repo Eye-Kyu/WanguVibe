@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
+import JsBarcode from 'jsbarcode';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessories', 'Footwear', 'Other'];
 const ITEMS_PER_PAGE = 12;
@@ -330,6 +331,138 @@ function VariantManagerModal({ style, onClose, onChanged }) {
     );
 }
 
+// ─── Barcode/Label Printing ─────────────────────────────────────────────────
+// Renders each label's barcode to an offscreen canvas (JsBarcode has no
+// direct data-URL API, unlike the `qrcode` package used elsewhere in this
+// app — canvas.toDataURL() is the bridge), then reuses the exact
+// popup-window print pattern already established for receipts in
+// POSPage.jsx (write the sheet's HTML into a blank window, print, close).
+function LabelPrintModal({ style, onClose }) {
+    const [variants, setVariants] = useState([]);
+    const [quantities, setQuantities] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        api.get(`/styles/${style._id}/variants`).then(res => {
+            if (cancelled) return;
+            setVariants(res.data);
+            const initialQty = {};
+            // Defaults to current stock (one label per unit on hand) capped
+            // at 50 so a huge restock doesn't silently queue an enormous
+            // print job — still fully editable per row.
+            res.data.forEach(v => { initialQty[v._id] = Math.min(v.stock || 0, 50); });
+            setQuantities(initialQty);
+        }).finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [style._id]);
+
+    const setQty = (id, val) => setQuantities(q => ({ ...q, [id]: Math.max(0, parseInt(val, 10) || 0) }));
+
+    const handlePrint = () => {
+        const lines = [];
+        variants.forEach(v => {
+            const qty = quantities[v._id] || 0;
+            // A variant's barcode field is optional (sparse/unique) — fall
+            // back to its always-present sku so every variant can still get
+            // a scannable label even before a separate barcode is assigned.
+            const code = v.barcode || v.sku;
+            for (let i = 0; i < qty; i++) lines.push({ variant: v, code });
+        });
+        if (lines.length === 0) {
+            toast.error('Set a quantity for at least one size/color');
+            return;
+        }
+
+        const price = (v) => Number(v.priceOverride ?? style.basePrice).toFixed(2);
+        const labelHtml = lines.map(({ variant: v, code }) => {
+            const canvas = document.createElement('canvas');
+            JsBarcode(canvas, code, { format: 'CODE128', displayValue: false, width: 2, height: 40, margin: 0 });
+            return `<div class="label">
+                <img src="${canvas.toDataURL('image/png')}" />
+                <div class="label-name">${style.name}</div>
+                <div class="label-sub">${v.size}/${v.color} · KES ${price(v)}</div>
+                <div class="label-code">${code}</div>
+            </div>`;
+        }).join('');
+
+        const w = window.open('', '', 'width=800,height=600');
+        w.document.write(`<html><head><title>Labels — ${style.name}</title><style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 8px; }
+            .sheet { display: flex; flex-wrap: wrap; gap: 4px; }
+            .label { width: 190px; padding: 6px 4px; border: 1px dashed #ccc; text-align: center; page-break-inside: avoid; }
+            .label img { max-width: 100%; height: 40px; }
+            .label-name { font-size: 11px; font-weight: bold; margin-top: 2px; }
+            .label-sub { font-size: 10px; color: #333; }
+            .label-code { font-size: 9px; color: #666; font-family: 'Courier New', monospace; }
+        </style></head><body><div class="sheet">${labelHtml}</div></body></html>`);
+        w.document.close();
+        w.onload = () => { setTimeout(() => { w.print(); w.close(); }, 300); };
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
+                    <div>
+                        <h2 className="font-semibold text-gray-800">Print Labels — {style.name}</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">Set how many labels to print for each size/color</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                </div>
+
+                <div className="p-5">
+                    {loading ? (
+                        <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
+                    ) : variants.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-6">This style has no sizes/colors yet</p>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                                    <th className="pb-2 text-left">Size/Color</th>
+                                    <th className="pb-2 text-left">Code</th>
+                                    <th className="pb-2 text-right">Stock</th>
+                                    <th className="pb-2 text-right">Qty to Print</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {variants.map(v => (
+                                    <tr key={v._id}>
+                                        <td className="py-2">{v.size}/{v.color}</td>
+                                        <td className="py-2 font-mono text-xs text-gray-500">{v.barcode || v.sku}</td>
+                                        <td className="py-2 text-right text-gray-500">{v.stock}</td>
+                                        <td className="py-2 text-right">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right"
+                                                value={quantities[v._id] ?? 0}
+                                                onChange={e => setQty(v._id, e.target.value)}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2 px-5 py-4 border-t sticky bottom-0 bg-white">
+                    <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button
+                        onClick={handlePrint}
+                        disabled={loading || variants.length === 0}
+                        className="px-4 py-2 rounded-xl text-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    >
+                        Print Labels
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function ProductsPage() {
     const [styles, setStyles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -342,6 +475,7 @@ export default function ProductsPage() {
 
     const [modalStyle, setModalStyle] = useState(null); // null = closed, {} = new, {...style} = edit
     const [variantStyle, setVariantStyle] = useState(null); // style whose variant manager is open
+    const [labelStyle, setLabelStyle] = useState(null); // style whose label-print modal is open
     const [confirmId, setConfirmId] = useState(null);
 
     const fetchStyles = useCallback(async () => {
@@ -557,6 +691,12 @@ export default function ProductsPage() {
                                                     Sizes/Colors
                                                 </button>
                                                 <button
+                                                    onClick={() => setLabelStyle(s)}
+                                                    className="px-3 py-1 rounded-xl text-xs font-medium text-teal-600 border border-teal-200 hover:bg-teal-50 transition-colors"
+                                                >
+                                                    Labels
+                                                </button>
+                                                <button
                                                     onClick={() => setModalStyle(s)}
                                                     className="px-3 py-1 rounded-xl text-xs font-medium text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
                                                 >
@@ -604,6 +744,13 @@ export default function ProductsPage() {
                     style={variantStyle}
                     onClose={() => setVariantStyle(null)}
                     onChanged={fetchStyles}
+                />
+            )}
+
+            {labelStyle && (
+                <LabelPrintModal
+                    style={labelStyle}
+                    onClose={() => setLabelStyle(null)}
                 />
             )}
 

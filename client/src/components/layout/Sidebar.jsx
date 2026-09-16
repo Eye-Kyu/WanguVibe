@@ -4,7 +4,8 @@ import { NavLink } from 'react-router-dom';
 import {
     IconHome, IconReceipt, IconHanger, IconUsers, IconBox,
     IconClipboard, IconClock, IconGift, IconRefresh, IconUser, IconChevronLeft, IconTag,
-    IconPhone, IconCart,
+    IconPhone, IconCart, IconTrendingUp, IconAlertTriangle, IconBarChart,
+    IconWebhook, IconKey,
 } from '../icons';
 
 const NAV_ITEMS = [
@@ -15,6 +16,11 @@ const NAV_ITEMS = [
     { to: '/admin/inventory', label: 'Inventory', Icon: IconBox },
     { to: '/admin/suppliers', label: 'Suppliers', Icon: IconPhone },
     { to: '/admin/purchase-orders', label: 'Purchase Orders', Icon: IconCart },
+    { to: '/admin/margins', label: 'Margin Report', Icon: IconTrendingUp },
+    { to: '/admin/forecast', label: 'Reorder Forecast', Icon: IconAlertTriangle },
+    { to: '/admin/analytics', label: 'Analytics', Icon: IconBarChart },
+    { to: '/admin/webhooks', label: 'Webhooks', Icon: IconWebhook },
+    { to: '/admin/api-keys', label: 'API Keys', Icon: IconKey },
     { to: '/admin/audit', label: 'Audit Log', Icon: IconClipboard },
     { to: '/admin/shifts', label: 'Shifts', Icon: IconClock },
     { to: '/admin/giftcards', label: 'Gift Cards', Icon: IconGift },

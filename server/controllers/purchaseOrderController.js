@@ -6,6 +6,7 @@ const InventoryLog = require('../models/InventoryLog');
 const HttpError = require('../utils/httpError');
 const { logAudit } = require('../utils/auditLogger');
 const { reportError } = require('../utils/reportError');
+const { refetchAndBroadcast } = require('../services/stockBroadcast');
 
 const populatePO = (query) => query
   .populate({ path: 'items.variant', select: 'sku barcode size color', populate: { path: 'style', select: 'name images' } })
@@ -115,6 +116,7 @@ exports.receivePurchaseOrder = async (req, res) => {
     }
 
     logAudit({ action: 'purchase_order_received', details: { purchaseOrderId: po._id, items, status: po.status }, userId: req.user.id });
+    refetchAndBroadcast(items.map((i) => i.variant));
     const populated = await populatePO(PurchaseOrder.findById(po._id));
     res.json(populated);
   } catch (err) {

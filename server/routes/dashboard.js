@@ -3,7 +3,9 @@ const { reportError } = require('../utils/reportError');
 const router = express.Router();
 const Sale = require('../models/Sale');
 const Variant = require('../models/Variant');
-const { protect } = require('../middleware/authMiddleware');
+const Customer = require('../models/Customer');
+const User = require('../models/User');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // % change from prev to current; null when no previous data
 const trendPct = (current, prev) =>
@@ -227,4 +229,319 @@ router.get('/summary', protect, async (req, res) => {
     }
 });
 
+// GET /api/dashboard/margins — adminOnly (unlike /summary): actual supplier
+// cost data is more sensitive than aggregate revenue, matching the adminOnly
+// gate already used for shifts/gift cards/audit/suppliers/POs elsewhere.
+// Cost basis is Style.costPrice as it stands TODAY (Sale.items doesn't
+// snapshot cost at sale time) — a supplier-cost change recalculates margin on
+// past sales too. A deliberate v1 trade-off, not an oversight.
+// Named (not inline) specifically so tests can call it directly with a
+// mock req/res, same convention the controllers in this app already use —
+// none of the aggregation math depends on the protect/adminOnly middleware.
+async function getMarginReport(req, res) {
+    try {
+        const range = req.query.range || 'day';
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(todayStart);
+        weekStart.setDate(todayStart.getDate() - 6);
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        let rangeStart;
+        if (range === 'week') rangeStart = weekStart;
+        else if (range === 'month') rangeStart = monthStart;
+        else rangeStart = todayStart;
+
+        // Shared preprocessing down to one row per sale line, with its net
+        // quantity/revenue/cost/margin computed — reused below with a
+        // different terminal $group for each of the three output shapes.
+        const basePipeline = [
+            { $match: { createdAt: { $gte: rangeStart } } },
+            { $unwind: '$items' },
+            {
+                // Nets out returns, same convention /summary's topProducts
+                // already uses — a returned line contributes zero here too,
+                // so a fully-returned sale needs no separate status filter.
+                $addFields: {
+                    netQty: { $subtract: ['$items.quantity', { $ifNull: ['$items.returnedQuantity', 0] }] },
+                },
+            },
+            {
+                // Reproduces finalizeSale's exact revenue formula (per-line
+                // discount, then the whole-cart discount) so this report's
+                // revenue figures foot to real sale totals.
+                $addFields: {
+                    lineRevenue: {
+                        $multiply: [
+                            '$items.unitPrice',
+                            '$netQty',
+                            { $subtract: [1, { $divide: [{ $ifNull: ['$items.discount', 0] }, 100] }] },
+                            { $subtract: [1, { $divide: [{ $ifNull: ['$cartDiscount', 0] }, 100] }] },
+                        ],
+                    },
+                },
+            },
+            { $lookup: { from: 'variants', localField: 'items.variant', foreignField: '_id', as: 'variantDoc' } },
+            { $unwind: { path: '$variantDoc', preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: 'styles', localField: 'variantDoc.style', foreignField: '_id', as: 'styleDoc' } },
+            // preserveNullAndEmptyArrays so a sale line whose variant/style
+            // has since been deleted isn't dropped from the report — it just
+            // contributes zero cost and lands in an Uncategorized bucket,
+            // the same graceful-degradation convention as /summary's
+            // `v.style?.name || 'Unknown'`.
+            { $unwind: { path: '$styleDoc', preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    category: { $ifNull: ['$styleDoc.category', 'Uncategorized'] },
+                    lineCost: { $multiply: [{ $ifNull: ['$styleDoc.costPrice', 0] }, '$netQty'] },
+                },
+            },
+            { $addFields: { lineMargin: { $subtract: ['$lineRevenue', '$lineCost'] } } },
+        ];
+
+        const [totalsAgg, byStyleAgg, byCategoryAgg] = await Promise.all([
+            Sale.aggregate([
+                ...basePipeline,
+                { $group: { _id: null, revenue: { $sum: '$lineRevenue' }, cost: { $sum: '$lineCost' }, grossProfit: { $sum: '$lineMargin' } } },
+            ]),
+            Sale.aggregate([
+                ...basePipeline,
+                {
+                    $group: {
+                        _id: '$items.styleName',
+                        category: { $first: '$category' },
+                        qty: { $sum: '$netQty' },
+                        revenue: { $sum: '$lineRevenue' },
+                        cost: { $sum: '$lineCost' },
+                        grossProfit: { $sum: '$lineMargin' },
+                    },
+                },
+                { $sort: { grossProfit: -1 } },
+                { $limit: 50 },
+                { $project: { _id: 0, name: '$_id', category: 1, qty: 1, revenue: 1, cost: 1, grossProfit: 1 } },
+            ]),
+            Sale.aggregate([
+                ...basePipeline,
+                {
+                    $group: {
+                        _id: '$category',
+                        qty: { $sum: '$netQty' },
+                        revenue: { $sum: '$lineRevenue' },
+                        cost: { $sum: '$lineCost' },
+                        grossProfit: { $sum: '$lineMargin' },
+                    },
+                },
+                { $sort: { grossProfit: -1 } },
+                { $project: { _id: 0, category: '$_id', qty: 1, revenue: 1, cost: 1, grossProfit: 1 } },
+            ]),
+        ]);
+
+        const marginPct = (revenue, grossProfit) => (revenue > 0 ? parseFloat(((grossProfit / revenue) * 100).toFixed(1)) : 0);
+        const withMarginPct = (rows) => rows.map((r) => ({ ...r, marginPct: marginPct(r.revenue, r.grossProfit) }));
+
+        const totalsRow = totalsAgg[0] || { revenue: 0, cost: 0, grossProfit: 0 };
+        const totals = {
+            revenue: totalsRow.revenue || 0,
+            cost: totalsRow.cost || 0,
+            grossProfit: totalsRow.grossProfit || 0,
+            marginPct: marginPct(totalsRow.revenue || 0, totalsRow.grossProfit || 0),
+        };
+
+        res.json({
+            range,
+            totals,
+            byStyle: withMarginPct(byStyleAgg),
+            byCategory: withMarginPct(byCategoryAgg),
+        });
+    } catch (err) {
+        reportError(req, err, 'Margin report failed');
+        res.status(500).json({ error: 'Margin report failed' });
+    }
+}
+
+router.get('/margins', protect, adminOnly, getMarginReport);
+
+// GET /api/dashboard/customer-value — adminOnly. Deliberately NOT
+// range-filtered: "lifetime" value by definition covers every sale a
+// customer ever made. Sales with no customer attached (walk-ins) have no
+// identity to attribute value to and are excluded.
+async function getCustomerValue(req, res) {
+    try {
+        const agg = await Sale.aggregate([
+            { $match: { customer: { $ne: null } } },
+            {
+                $group: {
+                    _id: '$customer',
+                    totalSpend: { $sum: NET_AMOUNT },
+                    orderCount: { $sum: 1 },
+                    firstPurchase: { $min: '$createdAt' },
+                    lastPurchase: { $max: '$createdAt' },
+                },
+            },
+            { $sort: { totalSpend: -1 } },
+            { $limit: 50 },
+        ]);
+
+        const customerIds = agg.map((a) => a._id).filter(Boolean);
+        const customers = customerIds.length
+            ? await Customer.find({ _id: { $in: customerIds } }, 'name phone').lean()
+            : [];
+        const customerById = new Map(customers.map((c) => [c._id.toString(), c]));
+
+        // A customer deleted since their sales were made is skipped rather
+        // than shown as "Unknown" — there's no real remaining identity to
+        // report lifetime value against.
+        const customersOut = agg
+            .map((a) => {
+                const customer = a._id && customerById.get(a._id.toString());
+                if (!customer) return null;
+                return {
+                    customerId: a._id,
+                    name: customer.name,
+                    phone: customer.phone || null,
+                    totalSpend: a.totalSpend,
+                    orderCount: a.orderCount,
+                    avgOrderValue: parseFloat((a.totalSpend / a.orderCount).toFixed(2)),
+                    firstPurchase: a.firstPurchase,
+                    lastPurchase: a.lastPurchase,
+                };
+            })
+            .filter(Boolean);
+
+        res.json({ customers: customersOut });
+    } catch (err) {
+        reportError(req, err, 'Customer value report failed');
+        res.status(500).json({ error: 'Customer value report failed' });
+    }
+}
+
+router.get('/customer-value', protect, adminOnly, getCustomerValue);
+
+// GET /api/dashboard/staff-performance?range=day|week|month — adminOnly
+// (individual cashier performance is HR-adjacent, sensitive data). Reuses
+// the exact range/boundary logic already used by /summary and /margins.
+async function getStaffPerformance(req, res) {
+    try {
+        const range = req.query.range || 'day';
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(todayStart);
+        weekStart.setDate(todayStart.getDate() - 6);
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        let rangeStart;
+        if (range === 'week') rangeStart = weekStart;
+        else if (range === 'month') rangeStart = monthStart;
+        else rangeStart = todayStart;
+
+        const agg = await Sale.aggregate([
+            { $match: { createdAt: { $gte: rangeStart } } },
+            {
+                $group: {
+                    _id: '$cashier',
+                    revenue: { $sum: NET_AMOUNT },
+                    transactionCount: { $sum: 1 },
+                },
+            },
+            { $sort: { revenue: -1 } },
+        ]);
+
+        const cashierIds = agg.map((a) => a._id).filter(Boolean);
+        const cashiers = cashierIds.length ? await User.find({ _id: { $in: cashierIds } }, 'name').lean() : [];
+        const cashierById = new Map(cashiers.map((c) => [c._id.toString(), c]));
+
+        const staff = agg.map((a) => {
+            const cashier = a._id && cashierById.get(a._id.toString());
+            return {
+                cashierId: a._id,
+                name: cashier?.name || 'Unknown',
+                revenue: a.revenue,
+                transactionCount: a.transactionCount,
+                avgSaleValue: parseFloat((a.revenue / a.transactionCount).toFixed(2)),
+            };
+        });
+
+        res.json({ range, staff });
+    } catch (err) {
+        reportError(req, err, 'Staff performance report failed');
+        res.status(500).json({ error: 'Staff performance report failed' });
+    }
+}
+
+router.get('/staff-performance', protect, adminOnly, getStaffPerformance);
+
+// GET /api/dashboard/cohorts — adminOnly. Monthly acquisition-cohort
+// retention: a customer's cohort is the calendar month of their FIRST
+// purchase; retention at monthOffset N is how many of that cohort made ANY
+// purchase N months after their own cohort month. Computed in plain JS
+// after one aggregate (rather than one giant pipeline) for maintainability
+// — a boutique's customer count doesn't need pipeline-level scale here.
+// Only sales with a customer attached are cohortable, same exclusion as
+// getCustomerValue.
+async function getCohortRetention(req, res) {
+    try {
+        const agg = await Sale.aggregate([
+            { $match: { customer: { $ne: null } } },
+            {
+                $group: {
+                    _id: '$customer',
+                    // $addToSet already dedupes, so a customer with 3 sales
+                    // in the same month contributes that month exactly once.
+                    months: { $addToSet: { $dateToString: { format: '%Y-%m', date: '$createdAt' } } },
+                },
+            },
+        ]);
+
+        // cohortMonth ('YYYY-MM') -> { cohortSize, retainedByOffset: Map<offset, count> }
+        const cohorts = new Map();
+
+        for (const { months } of agg) {
+            if (!months || months.length === 0) continue;
+            const sortedMonths = [...months].sort(); // 'YYYY-MM' strings sort chronologically as plain strings
+            const cohortMonth = sortedMonths[0];
+            const [cohortYear, cohortMon] = cohortMonth.split('-').map(Number);
+
+            if (!cohorts.has(cohortMonth)) cohorts.set(cohortMonth, { cohortSize: 0, retainedByOffset: new Map() });
+            const cohort = cohorts.get(cohortMonth);
+            cohort.cohortSize += 1;
+
+            for (const month of sortedMonths) {
+                const [year, mon] = month.split('-').map(Number);
+                const monthOffset = (year - cohortYear) * 12 + (mon - cohortMon);
+                cohort.retainedByOffset.set(monthOffset, (cohort.retainedByOffset.get(monthOffset) || 0) + 1);
+            }
+        }
+
+        const cohortRows = [...cohorts.entries()]
+            .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // most recent cohort month first
+            .slice(0, 12)
+            .map(([cohortMonth, { cohortSize, retainedByOffset }]) => ({
+                cohortMonth,
+                cohortSize,
+                // monthOffset 0 is always exactly cohortSize by construction
+                // (every member's first purchase month IS their cohort
+                // month) — a correctness sanity-check baked into the shape
+                // of this output, not just asserted separately in tests.
+                retention: [...retainedByOffset.entries()]
+                    .sort((a, b) => a[0] - b[0])
+                    .map(([monthOffset, customersReturned]) => ({
+                        monthOffset,
+                        customersReturned,
+                        retentionPct: parseFloat(((customersReturned / cohortSize) * 100).toFixed(1)),
+                    })),
+            }));
+
+        res.json({ cohorts: cohortRows });
+    } catch (err) {
+        reportError(req, err, 'Cohort retention report failed');
+        res.status(500).json({ error: 'Cohort retention report failed' });
+    }
+}
+
+router.get('/cohorts', protect, adminOnly, getCohortRetention);
+
 module.exports = router;
+module.exports.getMarginReport = getMarginReport;
+module.exports.getCustomerValue = getCustomerValue;
+module.exports.getStaffPerformance = getStaffPerformance;
+module.exports.getCohortRetention = getCohortRetention;

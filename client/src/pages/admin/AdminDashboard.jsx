@@ -6,6 +6,7 @@ import SalesChart from '../../components/dashboard/SalesChart';
 import PieChartBestsellers from '../../components/dashboard/PieChartBestSellers';
 import BarChartStockLevels from '../../components/dashboard/BarChartStockLevels';
 import KpiCard from '../../components/dashboard/GradientStatCard';
+import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from '../../pushNotifications';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,51 @@ function PaymentBadge({ method }) {
         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${PAYMENT_BADGE_STYLES[method] || 'bg-gray-100 text-gray-700'}`}>
             {PAYMENT_LABELS[method] || method}
         </span>
+    );
+}
+
+// ─── Notifications toggle ───────────────────────────────────────────────────
+
+function NotificationsToggle() {
+    const [status, setStatus] = useState('checking'); // checking | unsupported | denied | unsubscribed | subscribed
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        if (!isPushSupported()) { setStatus('unsupported'); return; }
+        getPushSubscriptionStatus().then(setStatus).catch(() => setStatus('unsubscribed'));
+    }, []);
+
+    if (status === 'checking' || status === 'unsupported') return null;
+
+    const handleClick = async () => {
+        setBusy(true);
+        try {
+            if (status === 'subscribed') {
+                await unsubscribeFromPush();
+                setStatus('unsubscribed');
+                toast.info('Notifications disabled');
+            } else {
+                await subscribeToPush();
+                setStatus('subscribed');
+                toast.success('Notifications enabled');
+            }
+        } catch (err) {
+            toast.error(err.message || 'Failed to update notification settings');
+            if (Notification.permission === 'denied') setStatus('denied');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <button
+            onClick={handleClick}
+            disabled={busy || status === 'denied'}
+            title={status === 'denied' ? 'Notifications blocked in browser settings' : undefined}
+            className="self-start sm:self-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 disabled:opacity-50 transition"
+        >
+            {status === 'denied' ? 'Notifications blocked' : status === 'subscribed' ? 'Disable Notifications' : 'Enable Notifications'}
+        </button>
     );
 }
 
@@ -102,13 +148,16 @@ const AdminDashboard = () => {
                         })}
                     </p>
                 </div>
-                <button
-                    onClick={fetchDashboard}
-                    disabled={loading}
-                    className="self-start sm:self-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition"
-                >
-                    {loading ? 'Refreshing…' : 'Refresh'}
-                </button>
+                <div className="flex items-center gap-2">
+                    <NotificationsToggle />
+                    <button
+                        onClick={fetchDashboard}
+                        disabled={loading}
+                        className="self-start sm:self-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition"
+                    >
+                        {loading ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                </div>
             </div>
 
             {/* ── KPI Cards ─────────────────────────────────────────────── */}

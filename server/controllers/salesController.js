@@ -12,6 +12,8 @@ const HttpError = require('../utils/httpError');
 const { generateGiftCardCode } = require('../utils/giftCard');
 const { submitInvoice } = require('../services/etims');
 const { reportError } = require('../utils/reportError');
+const { refetchAndBroadcast } = require('../services/stockBroadcast');
+const { triggerWebhookEvent } = require('../services/webhooks');
 
 const PAYMENT_METHODS = ['cash', 'mpesa', 'card', 'store_credit', 'gift_card'];
 
@@ -156,6 +158,7 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
   try {
     let sale;
     const auditExtras = [];
+    const changedVariantIds = [];
 
     await session.withTransaction(async () => {
       // Optional: kept optional so the API isn't a breaking change, but if a
@@ -196,6 +199,7 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
         });
 
         await Variant.findByIdAndUpdate(variant._id, { $inc: { stock: -item.quantity } }, { session });
+        changedVariantIds.push(variant._id);
       }
 
       calculatedTotal = calculatedTotal * (1 - (cartDiscount ?? 0) / 100);
@@ -301,6 +305,19 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
       logAudit({ ...extra, userId: cashier });
     }
 
+    refetchAndBroadcast(changedVariantIds);
+
+    // Known v1 gap, documented in the Tier 4 plan: a Sale created via
+    // completeLayaway (which saves a Sale directly, not through this
+    // function) does not fire this event.
+    triggerWebhookEvent('sale.completed', {
+      saleId: sale._id,
+      totalAmount: sale.totalAmount,
+      paymentMethod: sale.paymentMethod,
+      itemCount: sale.items.length,
+      createdAt: sale.createdAt,
+    }).catch((err) => reportError(null, err, 'sale.completed webhook trigger failed'));
+
     await submitSaleToEtims(sale, { simulateEtimsFailure });
 
     return sale;
@@ -392,6 +409,7 @@ exports.returnSale = async (req, res) => {
   try {
     let sale;
     let refundAmount = 0;
+    const changedVariantIds = [];
 
     await session.withTransaction(async () => {
       sale = await Sale.findById(req.params.id).session(session);
@@ -424,6 +442,7 @@ exports.returnSale = async (req, res) => {
         line.returnedQuantity = (line.returnedQuantity || 0) + quantity;
 
         await Variant.findByIdAndUpdate(variantId, { $inc: { stock: quantity } }, { session });
+        changedVariantIds.push(variantId);
       }
 
       // Same cart-level discount applied at sale time, applied to the refunded portion
@@ -460,6 +479,8 @@ exports.returnSale = async (req, res) => {
       details: { saleId: sale._id, destination, refundAmount, status: sale.status },
       userId: req.user.id,
     });
+
+    refetchAndBroadcast(changedVariantIds);
 
     const populatedSale = await populateSale(Sale.findById(sale._id));
     res.json({ sale: populatedSale, refundAmount: parseFloat(refundAmount.toFixed(2)) });

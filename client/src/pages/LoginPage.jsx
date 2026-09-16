@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import api from "../api/axiosInstance";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import businessSettings from "../config/businessSettings";
 
 const LoginPage = () => {
@@ -120,6 +120,13 @@ const LoginPage = () => {
                         >
                             Login
                         </button>
+
+                        <Link
+                            to="/balance"
+                            className="block text-center text-xs text-gray-300 hover:text-yellow-400 transition"
+                        >
+                            Check your store credit or gift card balance
+                        </Link>
                     </div>
                 </div>
             </div>

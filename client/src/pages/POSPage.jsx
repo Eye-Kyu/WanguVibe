@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import businessSettings from '../config/businessSettings';
 import { setPosLocale } from '../i18n';
 import { IconPhoto, IconGift, IconX, IconCheck, IconCash, IconPhone, IconCard, IconTag, IconPrinter, IconCart, IconCamera, IconSearch } from '../components/icons';
+import { queueSale, flushQueue, getPendingSales, getFailedSales, cacheStyles, getCachedStyles } from '../offlineQueue';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 // Total stock across a style's variants, and its displayed price (a single
@@ -1188,19 +1189,117 @@ export default function POSPage() {
     }, [currentShift]);
 
     // ── Load all styles (called on mount + after each sale) ──
+    // Falls back to the last-cached catalog when the request fails outright
+    // (offline) rather than just erroring — stock counts shown this way are
+    // "as of last sync", surfaced via isOffline/cacheAge below, not claimed live.
+    const [isOffline, setIsOffline] = useState(false);
+    const [cachedAt, setCachedAt] = useState(null);
+
     const loadStyles = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get('/styles');
             setAllStyles(res.data);
+            setIsOffline(false);
+            setCachedAt(null);
+            cacheStyles(res.data).catch(() => {});
         } catch {
-            toast.error(t('pos.toast.stylesLoadFailed'));
+            const cached = await getCachedStyles().catch(() => null);
+            if (cached) {
+                setAllStyles(cached.styles);
+                setIsOffline(true);
+                setCachedAt(cached.cachedAt);
+            } else {
+                toast.error(t('pos.toast.stylesLoadFailed'));
+            }
         } finally {
             setLoading(false);
         }
     }, [t]);
 
     useEffect(() => { loadStyles(); }, [loadStyles]);
+
+    // ── Offline sales queue: sync status + auto-flush on reconnect ──
+    const [offlineCounts, setOfflineCounts] = useState({ pending: 0, failed: 0 });
+    const refreshOfflineCounts = useCallback(async () => {
+        const [pending, failed] = await Promise.all([getPendingSales(), getFailedSales()]);
+        setOfflineCounts({ pending: pending.length, failed: failed.length });
+    }, []);
+
+    const syncOfflineQueue = useCallback(async () => {
+        const result = await flushQueue((payload) => api.post('/sales', payload));
+        if (result.synced > 0) toast.success(`${result.synced} queued sale${result.synced !== 1 ? 's' : ''} synced`);
+        if (result.failed > 0) toast.error(`${result.failed} queued sale${result.failed !== 1 ? 's' : ''} could not sync — needs attention`);
+        await refreshOfflineCounts();
+        if (result.synced > 0) loadStyles(); // stock changed
+    }, [refreshOfflineCounts, loadStyles]);
+
+    useEffect(() => {
+        refreshOfflineCounts();
+        window.addEventListener('online', syncOfflineQueue);
+        if (navigator.onLine) syncOfflineQueue(); // catch anything queued from a previous session
+        return () => window.removeEventListener('online', syncOfflineQueue);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ── Live stock sync (SSE) — patches allStyles in place, no refetch/flicker ──
+    const applyStockChanges = useCallback((changes) => {
+        setAllStyles(prev => prev.map(style => {
+            const relevant = changes.filter(c => c.styleId === style._id);
+            if (relevant.length === 0) return style;
+            return {
+                ...style,
+                variants: style.variants.map(v => {
+                    const change = relevant.find(c => c.variantId === v._id);
+                    return change ? { ...v, stock: change.stock } : v;
+                }),
+            };
+        }));
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        let reader = null;
+
+        // Reads the stream via fetch (not native EventSource) specifically so
+        // the access token can go in a normal Authorization header instead of
+        // the URL — EventSource can't set custom headers, and a token in a
+        // query string can leak into logs/proxies/browser history.
+        async function connect() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) { if (!cancelled) setTimeout(connect, 3000); return; }
+                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stock-events`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                while (!cancelled) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop();
+                    for (const part of parts) {
+                        const line = part.split('\n').find(l => l.startsWith('data: '));
+                        if (!line) continue;
+                        try {
+                            const msg = JSON.parse(line.slice(6));
+                            if (msg.type === 'stock_update') applyStockChanges(msg.changes);
+                        } catch { /* not JSON (e.g. the ": connected" comment) */ }
+                    }
+                }
+            } catch { /* connection dropped — fall through to the reconnect below */ }
+            if (!cancelled) setTimeout(connect, 3000); // simple fixed-delay reconnect, not full backoff
+        }
+        connect();
+
+        return () => {
+            cancelled = true;
+            reader?.cancel().catch(() => {});
+        };
+    }, [applyStockChanges]);
 
     // ── Derived: categories with counts ──
     const categories = useMemo(
@@ -1389,15 +1488,20 @@ export default function POSPage() {
         }
 
         setProcessing(true);
+        const payload = {
+            items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
+            totalAmount: grandTotal,
+            cartDiscount,
+            shift: currentShift?._id,
+            giftCardsSold: giftCardsToSell.map(({ amount }) => ({ amount })),
+            ...(payments ? { payments } : { paymentMethod, customer, giftCardCode }),
+        };
+        // Only cash/card single-method sales with no gift card being sold
+        // alongside are safe to queue offline — everything else needs a live
+        // balance check (store credit, gift card) or is impossible offline
+        // (M-Pesa, already routed away above).
+        const offlineQueueable = !payments && (paymentMethod === 'Cash' || paymentMethod === 'Card') && giftCardsToSell.length === 0;
         try {
-            const payload = {
-                items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
-                totalAmount: grandTotal,
-                cartDiscount,
-                shift: currentShift?._id,
-                giftCardsSold: giftCardsToSell.map(({ amount }) => ({ amount })),
-                ...(payments ? { payments } : { paymentMethod, customer, giftCardCode }),
-            };
             const res = await api.post('/sales', payload);
             setSaleDetails(res.data);
             toast.success(t('pos.toast.saleCompleted'));
@@ -1409,11 +1513,21 @@ export default function POSPage() {
             setShowReceipt(true);
             loadStyles(); // refresh stock counts
         } catch (err) {
-            toast.error(err.response?.data?.error || t('pos.toast.saleFailed'));
+            if (!err.response && offlineQueueable) {
+                await queueSale(payload);
+                toast.info('No connection — sale queued, will sync automatically once back online');
+                setCart([]);
+                setCartDiscount(0);
+                setShowPayment(false);
+                setMobileCartOpen(false);
+                refreshOfflineCounts();
+            } else {
+                toast.error(err.response?.data?.error || t('pos.toast.saleFailed'));
+            }
         } finally {
             setProcessing(false);
         }
-    }, [cart, grandTotal, cartDiscount, paymentMethod, currentShift, giftCardsToSell, loadStyles, t]);
+    }, [cart, grandTotal, cartDiscount, paymentMethod, currentShift, giftCardsToSell, loadStyles, t, refreshOfflineCounts]);
 
     // Reserves the cart's items against a deposit instead of completing a
     // sale — doesn't touch giftCardsToSell (a separate, still-pending
@@ -1532,6 +1646,33 @@ export default function POSPage() {
                             </span>
                         )}
                     </button>
+
+                    {(offlineCounts.pending > 0 || offlineCounts.failed > 0) && (
+                        <button
+                            onClick={syncOfflineQueue}
+                            title="Click to retry syncing now"
+                            className={`flex items-center gap-1.5 text-xs font-semibold rounded-xl px-2.5 py-1.5 transition-colors flex-shrink-0 border ${
+                                offlineCounts.failed > 0
+                                    ? 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'
+                                    : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100'
+                            }`}
+                        >
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${offlineCounts.failed > 0 ? 'bg-red-500' : 'bg-amber-500'}`} />
+                            <span className="hidden sm:inline">
+                                {offlineCounts.pending > 0 && `${offlineCounts.pending} sale${offlineCounts.pending !== 1 ? 's' : ''} pending sync`}
+                                {offlineCounts.pending > 0 && offlineCounts.failed > 0 && ' · '}
+                                {offlineCounts.failed > 0 && `${offlineCounts.failed} failed`}
+                            </span>
+                            <span className="sm:hidden">Sync</span>
+                        </button>
+                    )}
+
+                    {isOffline && (
+                        <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-xl px-2.5 py-1.5 flex-shrink-0" title={cachedAt ? `Cached ${new Date(cachedAt).toLocaleString()}` : undefined}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                            Offline — cached stock
+                        </div>
+                    )}
 
                     {currentShift && (
                         <button
@@ -1808,7 +1949,7 @@ export default function POSPage() {
                             {cartDiscount > 0 && (
                                 <div className="flex justify-between text-red-500">
                                     <span>{t('pos.cart.discount', { pct: cartDiscount })}</span>
-                                    <span className="tabular-nums">−KES {(subtotal * cartDiscount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span className="tabular-nums">-KES {(subtotal * cartDiscount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
                             {giftCardsTotal > 0 && (

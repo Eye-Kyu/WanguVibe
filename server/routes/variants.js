@@ -6,6 +6,7 @@ const variantController = require('../controllers/variantController');
 
 // Order matters: static paths before the /:id catch-all
 router.get('/low-stock', protect, variantController.getLowStockVariants);
+router.get('/forecast', protect, variantController.getReorderForecast);
 router.get('/lookup', protect, variantController.lookupByBarcode);
 router.put('/:id', protect, variantController.updateVariant);
 router.delete('/:id', protect, checkRole('admin'), variantController.deleteVariant);

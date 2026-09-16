@@ -9,6 +9,7 @@ const HttpError = require('../utils/httpError');
 const { logAudit } = require('../utils/auditLogger');
 const { reportError } = require('../utils/reportError');
 const { submitSaleToEtims, populateSale } = require('./salesController');
+const { refetchAndBroadcast } = require('../services/stockBroadcast');
 
 const LAYAWAY_PAYMENT_METHODS = ['cash', 'card', 'store_credit', 'gift_card'];
 const normalizeMethod = (m) => (m || '').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '');
@@ -74,6 +75,7 @@ exports.createLayaway = async (req, res) => {
 
     const session = await mongoose.startSession();
     let layaway;
+    const changedVariantIds = [];
     try {
       await session.withTransaction(async () => {
         const customerDoc = await Customer.findById(customer).session(session);
@@ -106,6 +108,7 @@ exports.createLayaway = async (req, res) => {
           });
 
           await Variant.findByIdAndUpdate(variant._id, { $inc: { stock: -item.quantity } }, { session });
+          changedVariantIds.push(variant._id);
         }
 
         calculatedTotal = calculatedTotal * (1 - (cartDiscount ?? 0) / 100);
@@ -139,6 +142,7 @@ exports.createLayaway = async (req, res) => {
     }
 
     logAudit({ action: 'layaway_created', details: { layawayId: layaway._id, customer, totalAmount, deposit: deposit.amount }, userId: req.user.id });
+    refetchAndBroadcast(changedVariantIds);
     const populated = await populateLayaway(Layaway.findById(layaway._id));
     res.status(201).json(populated);
   } catch (err) {
@@ -291,6 +295,7 @@ exports.cancelLayaway = async (req, res) => {
     }
 
     logAudit({ action: 'layaway_cancelled', details: { layawayId: layaway._id, destination }, userId: req.user.id });
+    refetchAndBroadcast(layaway.items.map((i) => i.variant));
     const populated = await populateLayaway(Layaway.findById(layaway._id));
     res.json(populated);
   } catch (err) {

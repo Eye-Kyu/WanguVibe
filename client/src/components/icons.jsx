@@ -151,6 +151,12 @@ export const IconCheck = ({ className }) => (
     </svg>
 );
 
+export const IconTrendingUp = ({ className }) => (
+    <svg {...base} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l6-6 4 4 8-8m0 0h-5m5 0v5" />
+    </svg>
+);
+
 export const IconChevronLeft = ({ className }) => (
     <svg {...base} className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 6l-6 6 6 6" />
@@ -160,5 +166,35 @@ export const IconChevronLeft = ({ className }) => (
 export const IconX = ({ className }) => (
     <svg {...base} className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+export const IconBarChart = ({ className }) => (
+    <svg {...base} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 20V10m6 10V4m6 16v-7" />
+    </svg>
+);
+
+export const IconWebhook = ({ className }) => (
+    <svg {...base} className={className}>
+        <circle cx="6" cy="6" r="2.5" />
+        <circle cx="18" cy="6" r="2.5" />
+        <circle cx="12" cy="18" r="2.5" />
+        <path strokeLinecap="round" d="M8.2 7.3L15.8 4.7M8.5 7.5L11 16M15.5 7.5L13 16" />
+    </svg>
+);
+
+export const IconKey = ({ className }) => (
+    <svg {...base} className={className}>
+        <circle cx="7" cy="15" r="3.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 12.5L19 3m0 0v4m0-4h-4" />
+    </svg>
+);
+
+export const IconAlertTriangle = ({ className }) => (
+    <svg {...base} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l9 16H3l9-16z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v4" />
+        <circle cx="12" cy="17.5" r="0.9" fill="currentColor" stroke="none" />
     </svg>
 );
