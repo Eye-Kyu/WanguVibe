@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../api/axiosInstance";
 import { toast } from "react-toastify";
+import ErrorState from "../../components/ErrorState";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -21,6 +22,7 @@ function StatusBadge({ status }) {
 export default function EtimsRetryPage() {
     const [entries, setEntries] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [retryingId, setRetryingId] = useState(null);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(1);
@@ -31,6 +33,7 @@ export default function EtimsRetryPage() {
 
     const fetchQueue = useCallback(async () => {
         setLoading(true);
+        setError(false);
         try {
             const params = new URLSearchParams({ page, limit: LIMIT });
             if (statusFilter) params.set("status", statusFilter);
@@ -40,6 +43,7 @@ export default function EtimsRetryPage() {
             setTotal(res.data.total || 0);
         } catch {
             toast.error("Failed to load eTIMS retry queue");
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -91,6 +95,8 @@ export default function EtimsRetryPage() {
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+                ) : error ? (
+                    <ErrorState message="Failed to load eTIMS retry queue" onRetry={fetchQueue} />
                 ) : entries.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-12">
                         {statusFilter === "pending" ? "Nothing waiting on retry — all invoices submitted." : "No entries match this filter."}

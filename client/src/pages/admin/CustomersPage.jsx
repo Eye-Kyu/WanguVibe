@@ -2,33 +2,26 @@ import { useState, useEffect, useMemo, useContext, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../../context/AuthContext';
-
-function ConfirmDialog({ message, onConfirm, onCancel }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-80 space-y-4">
-                <p className="text-gray-800 text-sm">{message}</p>
-                <div className="flex gap-3 justify-end">
-                    <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button onClick={onConfirm} className="px-4 py-2 rounded-xl text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
-                </div>
-            </div>
-        </div>
-    );
-}
+import ErrorState from '../../components/ErrorState';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function StoreCreditLedgerModal({ customer, onClose }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-    useEffect(() => {
+    const fetchLedger = useCallback(() => {
+        setLoading(true);
+        setError(false);
         api.get(`/customers/${customer._id}/store-credit-ledger`)
             .then(res => setData(res.data))
-            .catch(() => toast.error('Failed to load store credit ledger'))
+            .catch(() => { toast.error('Failed to load store credit ledger'); setError(true); })
             .finally(() => setLoading(false));
     }, [customer._id]);
+
+    useEffect(() => { fetchLedger(); }, [fetchLedger]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -38,7 +31,7 @@ function StoreCreditLedgerModal({ customer, onClose }) {
                         <h2 className="font-semibold text-gray-800">Store Credit Ledger</h2>
                         <p className="text-xs text-gray-400 mt-0.5">{customer.name}</p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="px-5 py-3 bg-indigo-50 border-b border-indigo-100 shrink-0">
@@ -49,6 +42,8 @@ function StoreCreditLedgerModal({ customer, onClose }) {
                 <div className="overflow-y-auto flex-1">
                     {loading ? (
                         <div className="p-4 space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+                    ) : error ? (
+                        <ErrorState message="Failed to load store credit ledger" onRetry={fetchLedger} />
                     ) : !data?.entries?.length ? (
                         <p className="text-sm text-gray-400 text-center py-10">No store credit activity yet.</p>
                     ) : (
@@ -103,7 +98,7 @@ function CustomerModal({ initial, onSave, onClose, submitting }) {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{isEdit ? 'Edit Customer' : 'Add Customer'}</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -171,6 +166,7 @@ export default function CustomersPage() {
 
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [search, setSearch] = useState('');
     const [modalCustomer, setModalCustomer] = useState(null);
@@ -178,11 +174,14 @@ export default function CustomersPage() {
     const [ledgerCustomer, setLedgerCustomer] = useState(null);
 
     const fetchCustomers = useCallback(async () => {
+        setLoading(true);
+        setError(false);
         try {
             const res = await api.get('/customers');
             setCustomers(res.data);
         } catch {
             toast.error('Failed to load customers');
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -266,6 +265,8 @@ export default function CustomersPage() {
                 <div className="space-y-2">
                     {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}
                 </div>
+            ) : error ? (
+                <ErrorState message="Failed to load customers" onRetry={fetchCustomers} />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>

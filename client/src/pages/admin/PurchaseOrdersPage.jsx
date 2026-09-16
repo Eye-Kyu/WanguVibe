@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
+import ErrorState from '../../components/ErrorState';
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -94,7 +95,7 @@ function CreatePOModal({ suppliers, onSave, onClose, submitting }) {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
                 <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
                     <h2 className="font-semibold text-gray-800">New Purchase Order</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3 overflow-y-auto flex-1">
@@ -132,7 +133,7 @@ function CreatePOModal({ suppliers, onSave, onClose, submitting }) {
                                         placeholder="Unit cost"
                                         className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
                                     />
-                                    <button onClick={() => removeItem(i.variant)} className="text-gray-400 hover:text-red-500">&times;</button>
+                                    <button onClick={() => removeItem(i.variant)} aria-label="Remove item" className="text-gray-400 hover:text-red-500">&times;</button>
                                 </div>
                             ))}
                         </div>
@@ -217,7 +218,7 @@ function PODetailModal({ po, onClose, onUpdated }) {
                         <h2 className="font-semibold text-gray-800">Purchase Order</h2>
                         <p className="text-xs text-gray-400 mt-0.5">{po.supplier?.name || 'Unknown supplier'}</p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="overflow-y-auto flex-1">
@@ -278,6 +279,7 @@ export default function PurchaseOrdersPage() {
     const [purchaseOrders, setPurchaseOrders] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(1);
     const [total, setTotal] = useState(0);
@@ -290,6 +292,7 @@ export default function PurchaseOrdersPage() {
 
     const fetchPurchaseOrders = useCallback(async () => {
         setLoading(true);
+        setError(false);
         try {
             const params = new URLSearchParams({ page, limit: LIMIT });
             if (statusFilter) params.set('status', statusFilter);
@@ -299,6 +302,7 @@ export default function PurchaseOrdersPage() {
             setTotal(res.data.total || 0);
         } catch {
             toast.error('Failed to load purchase orders');
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -358,6 +362,8 @@ export default function PurchaseOrdersPage() {
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+                ) : error ? (
+                    <ErrorState message="Failed to load purchase orders" onRetry={fetchPurchaseOrders} />
                 ) : purchaseOrders.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-12">No purchase orders found.</p>
                 ) : (

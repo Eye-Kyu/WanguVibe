@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast, ToastContainer } from 'react-toastify';
+import ErrorState from '../../components/ErrorState';
 
 const fmt = (n) =>
     Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,16 +19,21 @@ const SECTIONS = [
 function CustomerValueSection() {
     const [rows, setRows] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-    useEffect(() => {
+    const fetchCustomerValue = useCallback(() => {
         setLoading(true);
+        setError(false);
         api.get('/dashboard/customer-value')
             .then((res) => setRows(res.data.customers))
-            .catch(() => toast.error('Failed to load customer value report'))
+            .catch(() => { toast.error('Failed to load customer value report'); setError(true); })
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => { fetchCustomerValue(); }, [fetchCustomerValue]);
+
     if (loading) return <p className="text-sm text-gray-400 text-center py-8">Loading…</p>;
+    if (error) return <ErrorState message="Failed to load customer value report" onRetry={fetchCustomerValue} />;
     if (!rows?.length) return <p className="text-sm text-gray-400 text-center py-8">No customer purchases yet</p>;
 
     return (
@@ -64,12 +70,14 @@ function StaffLeaderboardSection() {
     const [range, setRange] = useState('month');
     const [rows, setRows] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     const fetchStaff = useCallback(() => {
         setLoading(true);
+        setError(false);
         api.get(`/dashboard/staff-performance?range=${range}`)
             .then((res) => setRows(res.data.staff))
-            .catch(() => toast.error('Failed to load staff performance report'))
+            .catch(() => { toast.error('Failed to load staff performance report'); setError(true); })
             .finally(() => setLoading(false));
     }, [range]);
 
@@ -94,6 +102,8 @@ function StaffLeaderboardSection() {
             </div>
             {loading ? (
                 <p className="text-sm text-gray-400 text-center py-8">Loading…</p>
+            ) : error ? (
+                <ErrorState message="Failed to load staff performance report" onRetry={fetchStaff} />
             ) : !rows?.length ? (
                 <p className="text-sm text-gray-400 text-center py-8">No sales in this period</p>
             ) : (
@@ -127,16 +137,21 @@ function StaffLeaderboardSection() {
 function CohortRetentionSection() {
     const [cohorts, setCohorts] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-    useEffect(() => {
+    const fetchCohorts = useCallback(() => {
         setLoading(true);
+        setError(false);
         api.get('/dashboard/cohorts')
             .then((res) => setCohorts(res.data.cohorts))
-            .catch(() => toast.error('Failed to load cohort retention report'))
+            .catch(() => { toast.error('Failed to load cohort retention report'); setError(true); })
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => { fetchCohorts(); }, [fetchCohorts]);
+
     if (loading) return <p className="text-sm text-gray-400 text-center py-8">Loading…</p>;
+    if (error) return <ErrorState message="Failed to load cohort retention report" onRetry={fetchCohorts} />;
     if (!cohorts?.length) return <p className="text-sm text-gray-400 text-center py-8">Not enough customer purchase history yet</p>;
 
     const maxOffset = Math.max(0, ...cohorts.flatMap((c) => c.retention.map((r) => r.monthOffset)));

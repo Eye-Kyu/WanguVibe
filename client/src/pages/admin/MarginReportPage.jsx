@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast, ToastContainer } from 'react-toastify';
 import GradientStatCard from '../../components/dashboard/GradientStatCard';
+import ErrorState from '../../components/ErrorState';
 
 const fmt = (n) =>
     Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -56,12 +57,14 @@ export default function MarginReportPage() {
     const [data, setData] = useState(null);
     const [range, setRange] = useState('month');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     const fetchReport = useCallback(() => {
         setLoading(true);
+        setError(false);
         api.get(`/dashboard/margins?range=${range}`)
             .then((res) => setData(res.data))
-            .catch(() => toast.error('Failed to load margin report'))
+            .catch(() => { toast.error('Failed to load margin report'); setError(true); })
             .finally(() => setLoading(false));
     }, [range]);
 
@@ -79,6 +82,10 @@ export default function MarginReportPage() {
                 <div className="h-72 bg-gray-200 rounded-xl" />
             </div>
         );
+    }
+
+    if (error && !data) {
+        return <ErrorState message="Failed to load margin report" onRetry={fetchReport} />;
     }
 
     return (

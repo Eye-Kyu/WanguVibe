@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast, ToastContainer } from 'react-toastify';
+import ErrorState from '../../components/ErrorState';
 
 // Rows within this many days of stockout get a visual urgency cue — purely
 // a display threshold, unrelated to the server's REORDER_TARGET_COVERAGE_DAYS.
@@ -9,12 +10,14 @@ const URGENT_DAYS = 7;
 export default function ForecastPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     const fetchForecast = useCallback(() => {
         setLoading(true);
+        setError(false);
         api.get('/variants/forecast')
             .then((res) => setData(res.data))
-            .catch(() => toast.error('Failed to load reorder forecast'))
+            .catch(() => { toast.error('Failed to load reorder forecast'); setError(true); })
             .finally(() => setLoading(false));
     }, []);
 
@@ -27,6 +30,10 @@ export default function ForecastPage() {
                 <div className="h-96 bg-gray-200 rounded-xl" />
             </div>
         );
+    }
+
+    if (error && !data) {
+        return <ErrorState message="Failed to load reorder forecast" onRetry={fetchForecast} />;
     }
 
     const forecast = data?.forecast ?? [];

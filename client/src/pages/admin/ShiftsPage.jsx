@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../api/axiosInstance";
 import { toast } from "react-toastify";
+import ErrorState from "../../components/ErrorState";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -22,6 +23,7 @@ function DiscrepancyBadge({ discrepancy }) {
 export default function ShiftsPage() {
     const [shifts, setShifts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(1);
     const [total, setTotal] = useState(0);
@@ -30,6 +32,7 @@ export default function ShiftsPage() {
 
     const fetchShifts = useCallback(async () => {
         setLoading(true);
+        setError(false);
         try {
             const res = await api.get(`/shifts?page=${page}&limit=${LIMIT}`);
             setShifts(res.data.shifts);
@@ -37,6 +40,7 @@ export default function ShiftsPage() {
             setTotal(res.data.total || 0);
         } catch {
             toast.error("Failed to load shifts");
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -67,6 +71,8 @@ export default function ShiftsPage() {
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+                ) : error ? (
+                    <ErrorState message="Failed to load shifts" onRetry={fetchShifts} />
                 ) : shifts.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-12">No shifts recorded yet.</p>
                 ) : (

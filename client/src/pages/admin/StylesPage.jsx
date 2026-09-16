@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
 import JsBarcode from 'jsbarcode';
+import ErrorState from '../../components/ErrorState';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Accessories', 'Footwear', 'Other'];
 const ITEMS_PER_PAGE = 12;
@@ -13,20 +15,6 @@ function StockBadge({ stock }) {
     if (stock < 5) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">{stock} — Critical</span>;
     if (stock < 15) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{stock} — Low</span>;
     return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">{stock} — OK</span>;
-}
-
-function ConfirmDialog({ message, onConfirm, onCancel }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-80 space-y-4">
-                <p className="text-gray-800 text-sm">{message}</p>
-                <div className="flex gap-3 justify-end">
-                    <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button onClick={onConfirm} className="px-4 py-2 rounded-xl text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
-                </div>
-            </div>
-        </div>
-    );
 }
 
 // ─── Style create/edit form ──────────────────────────────────────────────────
@@ -42,7 +30,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{initial?._id ? 'Edit Style' : 'Add Style'}</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -251,7 +239,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                         <h2 className="font-semibold text-gray-800">Sizes &amp; Colors — {style.name}</h2>
                         <p className="text-xs text-gray-400 mt-0.5">Each row is one sellable size/color, with its own barcode and stock</p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5">
@@ -341,9 +329,12 @@ function LabelPrintModal({ style, onClose }) {
     const [variants, setVariants] = useState([]);
     const [quantities, setQuantities] = useState({});
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-    useEffect(() => {
+    const fetchVariants = useCallback(() => {
         let cancelled = false;
+        setLoading(true);
+        setError(false);
         api.get(`/styles/${style._id}/variants`).then(res => {
             if (cancelled) return;
             setVariants(res.data);
@@ -353,9 +344,12 @@ function LabelPrintModal({ style, onClose }) {
             // print job — still fully editable per row.
             res.data.forEach(v => { initialQty[v._id] = Math.min(v.stock || 0, 50); });
             setQuantities(initialQty);
-        }).finally(() => { if (!cancelled) setLoading(false); });
+        }).catch(() => { if (!cancelled) setError(true); })
+            .finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
     }, [style._id]);
+
+    useEffect(() => fetchVariants(), [fetchVariants]);
 
     const setQty = (id, val) => setQuantities(q => ({ ...q, [id]: Math.max(0, parseInt(val, 10) || 0) }));
 
@@ -408,12 +402,14 @@ function LabelPrintModal({ style, onClose }) {
                         <h2 className="font-semibold text-gray-800">Print Labels — {style.name}</h2>
                         <p className="text-xs text-gray-400 mt-0.5">Set how many labels to print for each size/color</p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5">
                     {loading ? (
                         <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
+                    ) : error ? (
+                        <ErrorState message="Failed to load sizes/colors" onRetry={fetchVariants} />
                     ) : variants.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-6">This style has no sizes/colors yet</p>
                     ) : (
@@ -466,6 +462,7 @@ function LabelPrintModal({ style, onClose }) {
 export default function ProductsPage() {
     const [styles, setStyles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const [search, setSearch] = useState('');
@@ -479,11 +476,14 @@ export default function ProductsPage() {
     const [confirmId, setConfirmId] = useState(null);
 
     const fetchStyles = useCallback(async () => {
+        setLoading(true);
+        setError(false);
         try {
             const res = await api.get('/styles', { params: { activeOnly: 'false' } });
             setStyles(res.data);
         } catch {
             toast.error('Failed to load styles');
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -642,6 +642,8 @@ export default function ProductsPage() {
                         <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
                     ))}
                 </div>
+            ) : error ? (
+                <ErrorState message="Failed to load styles" onRetry={fetchStyles} />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
@@ -722,10 +724,10 @@ export default function ProductsPage() {
                 <div className="flex items-center justify-between text-sm text-gray-500">
                     <span>Page {currentPage} of {totalPages} · {filtered.length} results</span>
                     <div className="flex gap-1">
-                        <button onClick={() => setPage(1)} disabled={currentPage === 1} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">«</button>
-                        <button onClick={() => setPage(p => p - 1)} disabled={currentPage === 1} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">‹</button>
-                        <button onClick={() => setPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">›</button>
-                        <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">»</button>
+                        <button onClick={() => setPage(1)} disabled={currentPage === 1} aria-label="First page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">«</button>
+                        <button onClick={() => setPage(p => p - 1)} disabled={currentPage === 1} aria-label="Previous page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">‹</button>
+                        <button onClick={() => setPage(p => p + 1)} disabled={currentPage === totalPages} aria-label="Next page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">›</button>
+                        <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} aria-label="Last page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">»</button>
                     </div>
                 </div>
             )}

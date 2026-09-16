@@ -4,6 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import GradientStatCard from "../../components/dashboard/GradientStatCard";
+import ErrorState from "../../components/ErrorState";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -299,6 +300,7 @@ function SaleModal({ sale, onClose, onReturned }) {
 const SalesPage = () => {
     const [sales, setSales]           = useState([]);
     const [loading, setLoading]       = useState(true);
+    const [error, setError]           = useState(false);
     const [selectedSale, setSelectedSale] = useState(null);
     const [page, setPage]             = useState(1);
 
@@ -313,11 +315,13 @@ const SalesPage = () => {
     // plus populated cashier (name) — no separate /styles call needed
     const fetchData = useCallback(async () => {
         setLoading(true);
+        setError(false);
         try {
             const res = await api.get("/sales");
             setSales(res.data);
         } catch {
             toast.error("Failed to load sales data");
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -428,6 +432,10 @@ const SalesPage = () => {
                 <div className="h-64 bg-gray-200 rounded-xl" />
             </div>
         );
+    }
+
+    if (error) {
+        return <ErrorState message="Failed to load sales data" onRetry={fetchData} />;
     }
 
     return (

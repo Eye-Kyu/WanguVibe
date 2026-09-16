@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}"
@@ -35,6 +36,8 @@ export default {
 				marquee: 'marquee var(--duration) linear infinite',
 				'marquee-vertical': 'marquee-vertical var(--duration) linear infinite',
 				aurora: 'aurora 60s linear infinite', // 👈 added
+				'fade-in': 'fade-in 0.15s ease-out',
+				'scale-in': 'scale-in 0.15s ease-out',
 			},
 			keyframes: {
 				marquee: {
@@ -52,6 +55,14 @@ export default {
 					to: {
 						backgroundPosition: "350% 50%, 350% 50%",
 					},
+				},
+				'fade-in': {
+					from: { opacity: '0' },
+					to: { opacity: '1' },
+				},
+				'scale-in': {
+					from: { opacity: '0', transform: 'scale(0.96)' },
+					to: { opacity: '1', transform: 'scale(1)' },
 				},
 			},
 		},

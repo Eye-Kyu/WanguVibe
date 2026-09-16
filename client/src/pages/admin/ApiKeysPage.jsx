@@ -1,20 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
-
-function ConfirmDialog({ message, onConfirm, onCancel }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-80 space-y-4">
-                <p className="text-gray-800 text-sm">{message}</p>
-                <div className="flex gap-3 justify-end">
-                    <button onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button onClick={onConfirm} className="px-4 py-2 rounded-xl text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Revoke</button>
-                </div>
-            </div>
-        </div>
-    );
-}
+import ErrorState from '../../components/ErrorState';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 function CreateKeyModal({ onSave, onClose, submitting }) {
     const [label, setLabel] = useState('');
@@ -23,7 +11,7 @@ function CreateKeyModal({ onSave, onClose, submitting }) {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">New API Key</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
                 <div className="p-5">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Label *</label>
@@ -76,17 +64,21 @@ function KeyRevealModal({ apiKey, onClose }) {
 export default function ApiKeysPage() {
     const [keys, setKeys] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
     const [revealKey, setRevealKey] = useState(null);
     const [confirmId, setConfirmId] = useState(null);
 
     const fetchKeys = useCallback(async () => {
+        setLoading(true);
+        setError(false);
         try {
             const res = await api.get('/api-keys');
             setKeys(res.data);
         } catch {
             toast.error('Failed to load API keys');
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -143,6 +135,8 @@ export default function ApiKeysPage() {
                 <div className="space-y-2">
                     {[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}
                 </div>
+            ) : error ? (
+                <ErrorState message="Failed to load API keys" onRetry={fetchKeys} />
             ) : keys.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-16">No API keys yet</p>
             ) : (
@@ -181,7 +175,7 @@ export default function ApiKeysPage() {
             {showCreate && <CreateKeyModal onSave={handleCreate} onClose={() => setShowCreate(false)} submitting={submitting} />}
             {revealKey && <KeyRevealModal apiKey={revealKey} onClose={() => setRevealKey(null)} />}
             {confirmId && (
-                <ConfirmDialog message="Revoke this API key? Any integration using it will stop working immediately." onConfirm={handleRevoke} onCancel={() => setConfirmId(null)} />
+                <ConfirmDialog message="Revoke this API key? Any integration using it will stop working immediately." confirmLabel="Revoke" onConfirm={handleRevoke} onCancel={() => setConfirmId(null)} />
             )}
         </div>
     );

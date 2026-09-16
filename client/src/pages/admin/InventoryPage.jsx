@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
+import ErrorState from '../../components/ErrorState';
 
 const variantLabel = (v, styleName) => `${styleName} — ${v.size}/${v.color}`;
 
@@ -29,7 +30,7 @@ function RestockModal({ variants, preselected, onSave, onClose, submitting }) {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">Restock Variant</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -100,10 +101,13 @@ export default function InventoryPage() {
     const [lowStock, setLowStock] = useState([]);
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [modalPreselect, setModalPreselect] = useState(undefined); // undefined = closed
 
     const fetchAll = useCallback(async () => {
+        setLoading(true);
+        setError(false);
         try {
             const [stylesRes, lowStockRes, logsRes] = await Promise.all([
                 api.get('/styles'),
@@ -119,6 +123,7 @@ export default function InventoryPage() {
             setLogs(logsRes.data);
         } catch {
             toast.error('Failed to load inventory data');
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -168,6 +173,8 @@ export default function InventoryPage() {
                 </div>
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(2)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+                ) : error ? (
+                    <ErrorState message="Failed to load inventory data" onRetry={fetchAll} />
                 ) : lowStock.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-6">Nothing below its reorder threshold right now.</p>
                 ) : (

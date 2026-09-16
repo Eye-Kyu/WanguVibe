@@ -175,6 +175,26 @@ export const IconBarChart = ({ className }) => (
     </svg>
 );
 
+export const IconSun = ({ className }) => (
+    <svg {...base} className={className}>
+        <circle cx="12" cy="12" r="4.5" />
+        <path strokeLinecap="round" d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8l1.8-1.8M18 6l1.8-1.8" />
+    </svg>
+);
+
+export const IconMoon = ({ className }) => (
+    <svg {...base} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 14.5A8.5 8.5 0 1110 3.2a6.5 6.5 0 0010 11.3z" />
+    </svg>
+);
+
+export const IconBell = ({ className }) => (
+    <svg {...base} className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+);
+
 export const IconWebhook = ({ className }) => (
     <svg {...base} className={className}>
         <circle cx="6" cy="6" r="2.5" />

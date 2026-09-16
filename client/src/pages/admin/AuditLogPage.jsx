@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../api/axiosInstance";
 import { toast } from "react-toastify";
+import ErrorState from "../../components/ErrorState";
 
 const ACTION_LABELS = {
     user_created: "User created",
@@ -30,6 +31,7 @@ function DetailsCell({ details }) {
 export default function AuditLogPage() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [page, setPage] = useState(1);
     const [pages, setPages] = useState(1);
     const [total, setTotal] = useState(0);
@@ -42,6 +44,7 @@ export default function AuditLogPage() {
 
     const fetchLogs = useCallback(async () => {
         setLoading(true);
+        setError(false);
         try {
             const params = new URLSearchParams({ page, limit: LIMIT });
             if (actionFilter) params.set("action", actionFilter);
@@ -53,6 +56,7 @@ export default function AuditLogPage() {
             setTotal(res.data.total || 0);
         } catch {
             toast.error("Failed to load audit log");
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -124,6 +128,8 @@ export default function AuditLogPage() {
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+                ) : error ? (
+                    <ErrorState message="Failed to load audit log" onRetry={fetchLogs} />
                 ) : logs.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-12">No audit entries match these filters.</p>
                 ) : (
