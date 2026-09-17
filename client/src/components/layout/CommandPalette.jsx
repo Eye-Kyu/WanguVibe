@@ -91,14 +91,14 @@ export default function CommandPalette() {
     return (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 bg-black/40 animate-fade-in" onClick={close} role="presentation">
             <div
-                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col overflow-hidden animate-scale-in"
+                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-sm shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col overflow-hidden animate-scale-in"
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Command palette"
             >
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                    <IconSearch className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                    <IconSearch className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                     <input
                         ref={inputRef}
                         value={query}
@@ -107,12 +107,12 @@ export default function CommandPalette() {
                         placeholder="Jump to a page or action…"
                         className="flex-1 bg-transparent outline-none text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                     />
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-lg">Esc</kbd>
+                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg">Esc</kbd>
                 </div>
 
                 <div className="overflow-y-auto flex-1 py-1">
                     {filtered.length === 0 ? (
-                        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No matches</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No matches</p>
                     ) : (
                         filtered.map((action, i) => (
                             <button
@@ -123,9 +123,9 @@ export default function CommandPalette() {
                                     i === activeIndex ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
                                 }`}
                             >
-                                <action.Icon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                                <action.Icon className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                                 <span className="text-sm text-gray-800 dark:text-gray-100 flex-1">{action.label}</span>
-                                <span className="text-[10px] text-gray-300 dark:text-gray-600 uppercase tracking-wide">{action.hint}</span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">{action.hint}</span>
                             </button>
                         ))
                     )}

@@ -8,11 +8,11 @@ import { IconAlertTriangle } from './icons';
 export default function ErrorState({ message = 'Something went wrong', onRetry }) {
     return (
         <div className="flex flex-col items-center justify-center py-16 text-center px-4 animate-fade-in">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center mb-3">
+            <div className="w-12 h-12 rounded-sm bg-red-50 dark:bg-red-900/30 flex items-center justify-center mb-3">
                 <IconAlertTriangle className="w-6 h-6 text-red-500 dark:text-red-400" />
             </div>
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{message}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-4">Check your connection and try again</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4">Check your connection and try again</p>
             {onRetry && (
                 <button
                     onClick={onRetry}

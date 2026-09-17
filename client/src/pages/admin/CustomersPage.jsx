@@ -25,13 +25,13 @@ function StoreCreditLedgerModal({ customer, onClose }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
                     <div>
                         <h2 className="font-semibold text-gray-800">Store Credit Ledger</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">{customer.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{customer.name}</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="px-5 py-3 bg-indigo-50 border-b border-indigo-100 shrink-0">
@@ -45,11 +45,11 @@ function StoreCreditLedgerModal({ customer, onClose }) {
                     ) : error ? (
                         <ErrorState message="Failed to load store credit ledger" onRetry={fetchLedger} />
                     ) : !data?.entries?.length ? (
-                        <p className="text-sm text-gray-400 text-center py-10">No store credit activity yet.</p>
+                        <p className="text-sm text-gray-500 text-center py-10">No store credit activity yet.</p>
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                                <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                     <th className="px-5 py-2 text-left">Date</th>
                                     <th className="px-5 py-2 text-left">Reason</th>
                                     <th className="px-5 py-2 text-left">By</th>
@@ -59,7 +59,7 @@ function StoreCreditLedgerModal({ customer, onClose }) {
                             <tbody className="divide-y divide-gray-50">
                                 {data.entries.map(e => (
                                     <tr key={e._id}>
-                                        <td className="px-5 py-2 text-gray-400 text-xs whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
+                                        <td className="px-5 py-2 text-gray-500 text-xs whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
                                         <td className="px-5 py-2 text-gray-600 text-xs capitalize">{e.reason.replace(/_/g, ' ')}</td>
                                         <td className="px-5 py-2 text-gray-500 text-xs">{e.createdBy?.name || '—'}</td>
                                         <td className={`px-5 py-2 text-right font-semibold ${e.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -95,10 +95,10 @@ function CustomerModal({ initial, onSave, onClose, submitting }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{isEdit ? 'Edit Customer' : 'Add Customer'}</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -244,7 +244,7 @@ export default function CustomersPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Customers</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{customers.length} customer{customers.length !== 1 ? 's' : ''}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{customers.length} customer{customers.length !== 1 ? 's' : ''}</p>
                 </div>
                 <button
                     onClick={() => setModalCustomer({})}
@@ -268,12 +268,12 @@ export default function CustomersPage() {
             ) : error ? (
                 <ErrorState message="Failed to load customers" onRetry={fetchCustomers} />
             ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     <p className="text-sm">No customers found</p>
                 </div>
             ) : (
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
@@ -298,7 +298,7 @@ export default function CustomersPage() {
                                     </td>
                                     <td className="px-4 py-3 text-gray-500 text-xs">{c.phone || '—'}</td>
                                     <td className="px-4 py-3 text-gray-500 text-xs">{c.email || '—'}</td>
-                                    <td className="px-4 py-3 text-gray-400 text-xs max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
+                                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
                                     <td className="px-4 py-3 text-right">
                                         <button
                                             onClick={() => setLedgerCustomer(c)}

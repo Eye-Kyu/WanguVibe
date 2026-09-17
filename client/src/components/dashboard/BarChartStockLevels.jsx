@@ -34,11 +34,11 @@ export default function BarChartStockLevels({ data = [] }) {
     const cursorFill = isDark ? '#1e293b' : '#f8fafc';
 
     return (
-        <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+        <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm p-5">
             <div className="flex items-start justify-between mb-4">
                 <div>
                     <h2 className="font-semibold text-gray-800 dark:text-gray-100">Variant Stock Levels</h2>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Current inventory across all size/color variants</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Current inventory across all size/color variants</p>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 flex-wrap justify-end">
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Healthy (&ge;15)</span>
@@ -48,7 +48,7 @@ export default function BarChartStockLevels({ data = [] }) {
                 </div>
             </div>
             {data.length === 0 ? (
-                <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">
+                <div className="flex items-center justify-center h-48 text-gray-500 dark:text-gray-400 text-sm">
                     No variant data available.
                 </div>
             ) : (

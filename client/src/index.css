@@ -19,9 +19,31 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* tailwind.config.js's borderRadius.lg/md/sm all read this — it was
+     never actually defined anywhere in this codebase's history (checked
+     via git log), meaning every rounded-sm/md/lg usage has silently
+     rendered as a square corner (var() with no fallback resolves to the
+     property's initial value, 0, when the custom property is unset) for
+     as long as this app has existed. Defining it here is what makes
+     "smoothen card edges to rounded-sm" actually produce a visible radius
+     instead of a no-op. */
+  --radius: 0.5rem;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+}
+
+/* Hides the scrollbar track/thumb while leaving actual scrolling (wheel,
+   trackpad, touch, keyboard) fully functional — used on the admin sidebar's
+   nav list so it can scroll independently of the page without a visible
+   scrollbar competing with the rest of the UI. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/legacy Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, modern Edge */
 }

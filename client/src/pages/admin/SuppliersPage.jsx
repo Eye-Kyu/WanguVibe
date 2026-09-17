@@ -19,10 +19,10 @@ function SupplierModal({ initial, onSave, onClose, submitting }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{isEdit ? 'Edit Supplier' : 'Add Supplier'}</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -175,7 +175,7 @@ export default function SuppliersPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Suppliers</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''}</p>
                 </div>
                 <button
                     onClick={() => setModalSupplier({})}
@@ -199,9 +199,9 @@ export default function SuppliersPage() {
             ) : error ? (
                 <ErrorState message="Failed to load suppliers" onRetry={fetchSuppliers} />
             ) : filtered.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-16">No suppliers found</p>
+                <p className="text-sm text-gray-500 text-center py-16">No suppliers found</p>
             ) : (
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">

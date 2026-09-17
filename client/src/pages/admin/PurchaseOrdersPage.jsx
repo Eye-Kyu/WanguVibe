@@ -42,9 +42,9 @@ const VariantSearchPicker = memo(({ onAdd }) => {
             {query.trim() && (
                 <div className="mt-1 border border-gray-100 rounded-xl divide-y divide-gray-50 max-h-40 overflow-y-auto">
                     {searching ? (
-                        <p className="text-xs text-gray-400 px-3 py-2">Searching…</p>
+                        <p className="text-xs text-gray-500 px-3 py-2">Searching…</p>
                     ) : results.length === 0 ? (
-                        <p className="text-xs text-gray-400 px-3 py-2">No matching styles</p>
+                        <p className="text-xs text-gray-500 px-3 py-2">No matching styles</p>
                     ) : results.map(style => (
                         style.variants?.map(v => (
                             <button
@@ -52,8 +52,8 @@ const VariantSearchPicker = memo(({ onAdd }) => {
                                 onClick={() => onAdd(v, style)}
                                 className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center justify-between"
                             >
-                                <span className="text-gray-700">{style.name} <span className="text-gray-400">({v.size}/{v.color})</span></span>
-                                <span className="text-gray-400">Stock: {v.stock}</span>
+                                <span className="text-gray-700">{style.name} <span className="text-gray-500">({v.size}/{v.color})</span></span>
+                                <span className="text-gray-500">Stock: {v.stock}</span>
                             </button>
                         ))
                     ))}
@@ -92,10 +92,10 @@ function CreatePOModal({ suppliers, onSave, onClose, submitting }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
                 <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
                     <h2 className="font-semibold text-gray-800">New Purchase Order</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3 overflow-y-auto flex-1">
@@ -120,7 +120,7 @@ function CreatePOModal({ suppliers, onSave, onClose, submitting }) {
                         <div className="space-y-2">
                             {items.map(i => (
                                 <div key={i.variant} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs">
-                                    <span className="flex-1 text-gray-700 truncate">{i.styleName} <span className="text-gray-400">({i.size}/{i.color})</span></span>
+                                    <span className="flex-1 text-gray-700 truncate">{i.styleName} <span className="text-gray-500">({i.size}/{i.color})</span></span>
                                     <input
                                         type="number" min="1" value={i.quantityOrdered}
                                         onChange={e => updateItem(i.variant, 'quantityOrdered', e.target.value)}
@@ -133,7 +133,7 @@ function CreatePOModal({ suppliers, onSave, onClose, submitting }) {
                                         placeholder="Unit cost"
                                         className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
                                     />
-                                    <button onClick={() => removeItem(i.variant)} aria-label="Remove item" className="text-gray-400 hover:text-red-500">&times;</button>
+                                    <button onClick={() => removeItem(i.variant)} aria-label="Remove item" className="text-gray-500 hover:text-red-500">&times;</button>
                                 </div>
                             ))}
                         </div>
@@ -212,19 +212,19 @@ function PODetailModal({ po, onClose, onUpdated }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
                     <div>
                         <h2 className="font-semibold text-gray-800">Purchase Order</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">{po.supplier?.name || 'Unknown supplier'}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{po.supplier?.name || 'Unknown supplier'}</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="overflow-y-auto flex-1">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                 <th className="px-5 py-2 text-left">Item</th>
                                 <th className="px-5 py-2 text-right">Ordered</th>
                                 <th className="px-5 py-2 text-right">Received</th>
@@ -234,7 +234,7 @@ function PODetailModal({ po, onClose, onUpdated }) {
                         <tbody className="divide-y divide-gray-50">
                             {po.items?.map((item) => (
                                 <tr key={item._id}>
-                                    <td className="px-5 py-2 text-gray-700">{item.styleName} <span className="text-gray-400 text-xs">({item.size}/{item.color})</span></td>
+                                    <td className="px-5 py-2 text-gray-700">{item.styleName} <span className="text-gray-500 text-xs">({item.size}/{item.color})</span></td>
                                     <td className="px-5 py-2 text-right text-gray-600">{item.quantityOrdered}</td>
                                     <td className="px-5 py-2 text-right text-gray-600">{item.quantityReceived}</td>
                                     {canReceive && (
@@ -336,7 +336,7 @@ export default function PurchaseOrdersPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Purchase Orders</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{total.toLocaleString()} order{total !== 1 ? 's' : ''}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} order{total !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <select
@@ -359,13 +359,13 @@ export default function PurchaseOrdersPage() {
                 </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                 ) : error ? (
                     <ErrorState message="Failed to load purchase orders" onRetry={fetchPurchaseOrders} />
                 ) : purchaseOrders.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-12">No purchase orders found.</p>
+                    <p className="text-sm text-gray-500 text-center py-12">No purchase orders found.</p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
@@ -391,7 +391,7 @@ export default function PurchaseOrdersPage() {
                                                 {po.status.replace('_', ' ')}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{new Date(po.createdAt).toLocaleString()}</td>
+                                        <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{new Date(po.createdAt).toLocaleString()}</td>
                                         <td className="px-4 py-2.5 text-right">
                                             <button onClick={() => setDetailPO(po)} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">View</button>
                                         </td>

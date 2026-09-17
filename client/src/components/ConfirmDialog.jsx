@@ -22,7 +22,7 @@ export default function ConfirmDialog({ message, onConfirm, onCancel, confirmLab
             role="presentation"
         >
             <div
-                className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 w-80 space-y-4 animate-scale-in"
+                className="bg-white dark:bg-gray-900 rounded-sm shadow-xl p-6 w-80 space-y-4 animate-scale-in"
                 onClick={(e) => e.stopPropagation()}
                 role="alertdialog"
                 aria-modal="true"

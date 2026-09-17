@@ -7,7 +7,7 @@ const fmt = (n) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigit
 
 function DiscrepancyBadge({ discrepancy }) {
     if (discrepancy === null || discrepancy === undefined) {
-        return <span className="text-xs text-gray-400">—</span>;
+        return <span className="text-xs text-gray-500">—</span>;
     }
     if (Math.abs(discrepancy) < 0.01) {
         return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Balanced</span>;
@@ -55,7 +55,7 @@ export default function ShiftsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Shifts</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                         {total.toLocaleString()} shift{total !== 1 ? "s" : ""}
                         {discrepancyCount > 0 && <span className="ml-2 text-amber-600 font-medium">· {discrepancyCount} with a discrepancy on this page</span>}
                     </p>
@@ -68,13 +68,13 @@ export default function ShiftsPage() {
                 </button>
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                 ) : error ? (
                     <ErrorState message="Failed to load shifts" onRetry={fetchShifts} />
                 ) : shifts.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-12">No shifts recorded yet.</p>
+                    <p className="text-sm text-gray-500 text-center py-12">No shifts recorded yet.</p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>

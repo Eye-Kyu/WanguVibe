@@ -106,7 +106,7 @@ function SaleModal({ sale, onClose, onReturned }) {
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
+                className="bg-white rounded-sm shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -116,13 +116,13 @@ function SaleModal({ sale, onClose, onReturned }) {
                             <h2 className="text-lg font-bold text-gray-900">Sale Receipt</h2>
                             <StatusBadge status={sale.status} />
                         </div>
-                        <p className="text-xs font-mono text-gray-400 mt-0.5">
+                        <p className="text-xs font-mono text-gray-500 mt-0.5">
                             #{sale._id.toUpperCase()}
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-700 text-2xl leading-none mt-0.5"
+                        className="text-gray-500 hover:text-gray-700 text-2xl leading-none mt-0.5"
                     >
                         &times;
                     </button>
@@ -131,24 +131,24 @@ function SaleModal({ sale, onClose, onReturned }) {
                 {/* Meta row */}
                 <div className="px-6 py-4 bg-gray-50 grid grid-cols-3 gap-4 text-sm shrink-0">
                     <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Date</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date</p>
                         <p className="font-medium text-gray-800">
                             {new Date(sale.createdAt).toLocaleDateString("en-US", {
                                 month: "short", day: "numeric", year: "numeric",
                             })}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-500">
                             {new Date(sale.createdAt).toLocaleTimeString("en-US", {
                                 hour: "2-digit", minute: "2-digit",
                             })}
                         </p>
                     </div>
                     <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Cashier</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cashier</p>
                         <p className="font-medium text-gray-800">{sale.cashier?.name || "—"}</p>
                     </div>
                     <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Payment</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Payment</p>
                         <PaymentBadge method={sale.paymentMethod} />
                     </div>
                 </div>
@@ -157,7 +157,7 @@ function SaleModal({ sale, onClose, onReturned }) {
                 <div className="px-6 py-4 overflow-y-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                 <th className="pb-2 text-left">Item</th>
                                 <th className="pb-2 text-right">Qty</th>
                                 <th className="pb-2 text-right">Unit Price</th>
@@ -214,7 +214,7 @@ function SaleModal({ sale, onClose, onReturned }) {
                                                     className="w-16 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-2 focus:ring-red-200"
                                                 />
                                             ) : (
-                                                <span className="text-xs text-gray-400">—</span>
+                                                <span className="text-xs text-gray-500">—</span>
                                             )}
                                         </td>
                                     </tr>
@@ -446,7 +446,7 @@ const SalesPage = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Sales History</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                         {sales.length.toLocaleString()} total records
                     </p>
                 </div>
@@ -480,7 +480,7 @@ const SalesPage = () => {
             </div>
 
             {/* ── Filters ──────────────────────────────────────────────── */}
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm p-4">
                 <div className="flex flex-wrap gap-3 items-end">
                     <div className="flex-1 min-w-[180px]">
                         <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -564,11 +564,11 @@ const SalesPage = () => {
             </div>
 
             {/* ── Table ────────────────────────────────────────────────── */}
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                 <th className="px-5 py-3">Sale ID</th>
                                 <th className="px-5 py-3">Date & Time</th>
                                 <th className="px-5 py-3">Items Sold</th>
@@ -581,7 +581,7 @@ const SalesPage = () => {
                         <tbody className="divide-y divide-gray-50">
                             {currentSales.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
+                                    <td colSpan={7} className="px-5 py-12 text-center text-gray-500 text-sm">
                                         {hasFilters
                                             ? "No sales match your current filters."
                                             : "No sales recorded yet."}
@@ -605,7 +605,7 @@ const SalesPage = () => {
                                             onClick={() => setSelectedSale(sale)}
                                         >
                                             <td className="px-5 py-3">
-                                                <span className="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">
+                                                <span className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-lg">
                                                     #{sale._id.slice(-6).toUpperCase()}
                                                 </span>
                                             </td>
@@ -620,7 +620,7 @@ const SalesPage = () => {
                                                     {preview || "—"}
                                                 </p>
                                                 {overflow && (
-                                                    <p className="text-xs text-gray-400">{overflow}</p>
+                                                    <p className="text-xs text-gray-500">{overflow}</p>
                                                 )}
                                             </td>
                                             <td className="px-5 py-3">

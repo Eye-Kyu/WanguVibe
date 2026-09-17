@@ -70,7 +70,7 @@ export default function EtimsRetryPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">eTIMS Retry Queue</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{total.toLocaleString()} entr{total !== 1 ? "ies" : "y"}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} entr{total !== 1 ? "ies" : "y"}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <select
@@ -92,13 +92,13 @@ export default function EtimsRetryPage() {
                 </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                 ) : error ? (
                     <ErrorState message="Failed to load eTIMS retry queue" onRetry={fetchQueue} />
                 ) : entries.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-12">
+                    <p className="text-sm text-gray-500 text-center py-12">
                         {statusFilter === "pending" ? "Nothing waiting on retry — all invoices submitted." : "No entries match this filter."}
                     </p>
                 ) : (
@@ -119,7 +119,7 @@ export default function EtimsRetryPage() {
                                 <tr key={e._id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-4 py-2.5 font-mono text-xs text-gray-700">#{e.sale?._id?.slice(-8).toUpperCase() || "—"}</td>
                                     <td className="px-4 py-2.5 text-right text-gray-600">KES {fmt(e.sale?.totalAmount)}</td>
-                                    <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{new Date(e.lastAttemptAt).toLocaleString()}</td>
+                                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{new Date(e.lastAttemptAt).toLocaleString()}</td>
                                     <td className="px-4 py-2.5 text-gray-600">{e.attempts}</td>
                                     <td className="px-4 py-2.5 text-red-500 text-xs max-w-[240px] truncate" title={e.lastError}>{e.lastError || "—"}</td>
                                     <td className="px-4 py-2.5"><StatusBadge status={e.status} /></td>

@@ -25,10 +25,10 @@ function UserModal({ initial, onSave, onClose, submitting, isSelf }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{isEdit ? 'Edit User' : 'Create User'}</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -51,7 +51,7 @@ function UserModal({ initial, onSave, onClose, submitting, isSelf }) {
                             onChange={e => set('username', e.target.value)}
                             disabled={isEdit}
                         />
-                        {isEdit && <p className="text-xs text-gray-400 mt-1">Username cannot be changed after creation.</p>}
+                        {isEdit && <p className="text-xs text-gray-500 mt-1">Username cannot be changed after creation.</p>}
                     </div>
 
                     <div>
@@ -69,12 +69,12 @@ function UserModal({ initial, onSave, onClose, submitting, isSelf }) {
                             <button
                                 type="button"
                                 onClick={() => setShowPw(v => !v)}
-                                className="absolute inset-y-0 right-3 text-xs text-gray-400 hover:text-gray-600"
+                                className="absolute inset-y-0 right-3 text-xs text-gray-500 hover:text-gray-600"
                             >
                                 {showPw ? 'Hide' : 'Show'}
                             </button>
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">{pwHint}</p>
+                        <p className="text-xs text-gray-500 mt-1">{pwHint}</p>
                     </div>
 
                     <div>
@@ -188,7 +188,7 @@ export default function UsersPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Users</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{users.length} team member{users.length !== 1 ? 's' : ''}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{users.length} team member{users.length !== 1 ? 's' : ''}</p>
                 </div>
                 <button
                     onClick={() => setModalUser({})}
@@ -227,12 +227,12 @@ export default function UsersPage() {
             ) : error ? (
                 <ErrorState message="Failed to load users" onRetry={fetchUsers} />
             ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>
+                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>
                     <p className="text-sm">No users found</p>
                 </div>
             ) : (
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
@@ -261,7 +261,7 @@ export default function UsersPage() {
                                     </td>
                                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">{u.username}</td>
                                     <td className="px-4 py-3"><RoleBadge role={u.role} /></td>
-                                    <td className="px-4 py-3 text-gray-400 text-xs">
+                                    <td className="px-4 py-3 text-gray-500 text-xs">
                                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                                     </td>
                                     <td className="px-4 py-3 text-right">

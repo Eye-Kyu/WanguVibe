@@ -27,10 +27,10 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">{initial?._id ? 'Edit Style' : 'Add Style'}</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -233,19 +233,19 @@ function VariantManagerModal({ style, onClose, onChanged }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
                     <div>
                         <h2 className="font-semibold text-gray-800">Sizes &amp; Colors — {style.name}</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Each row is one sellable size/color, with its own barcode and stock</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Each row is one sellable size/color, with its own barcode and stock</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                 <th className="pb-2 text-left">Size</th>
                                 <th className="pb-2 text-left">Color</th>
                                 <th className="pb-2 text-left">SKU</th>
@@ -271,7 +271,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                                                 <td className="py-2 pr-2"><input type="number" className="w-20 border border-gray-200 rounded-lg px-1.5 py-1 text-xs text-right" placeholder="—" value={row.priceOverride ?? ''} onChange={e => setEditRow({ ...row, priceOverride: e.target.value })} /></td>
                                                 <td className="py-2 text-right whitespace-nowrap">
                                                     <button disabled={busy} onClick={() => saveEdit(v._id)} className="text-xs font-semibold text-green-600 hover:text-green-800 mr-2">Save</button>
-                                                    <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                                                    <button onClick={() => setEditingId(null)} className="text-xs text-gray-500 hover:text-gray-600">Cancel</button>
                                                 </td>
                                             </>
                                         ) : (
@@ -279,7 +279,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                                                 <td className="py-2.5 font-medium text-gray-800">{v.size}</td>
                                                 <td className="py-2.5 text-gray-600">{v.color}</td>
                                                 <td className="py-2.5 font-mono text-xs text-gray-500">{v.sku}</td>
-                                                <td className="py-2.5 font-mono text-xs text-gray-400">{v.barcode || '—'}</td>
+                                                <td className="py-2.5 font-mono text-xs text-gray-500">{v.barcode || '—'}</td>
                                                 <td className="py-2.5 text-right"><StockBadge stock={v.stock} /></td>
                                                 <td className="py-2.5 text-right text-gray-500">{v.priceOverride != null ? `KES ${v.priceOverride}` : '—'}</td>
                                                 <td className="py-2.5 text-right whitespace-nowrap">
@@ -307,7 +307,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                         </tbody>
                     </table>
                     {variants.length === 0 && (
-                        <p className="text-sm text-gray-400 text-center py-6">No variants yet — add the first size/color above.</p>
+                        <p className="text-sm text-gray-500 text-center py-6">No variants yet — add the first size/color above.</p>
                     )}
                 </div>
 
@@ -396,26 +396,26 @@ function LabelPrintModal({ style, onClose }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
                     <div>
                         <h2 className="font-semibold text-gray-800">Print Labels — {style.name}</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Set how many labels to print for each size/color</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Set how many labels to print for each size/color</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="p-5">
                     {loading ? (
-                        <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
+                        <p className="text-sm text-gray-500 text-center py-6">Loading…</p>
                     ) : error ? (
                         <ErrorState message="Failed to load sizes/colors" onRetry={fetchVariants} />
                     ) : variants.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-6">This style has no sizes/colors yet</p>
+                        <p className="text-sm text-gray-500 text-center py-6">This style has no sizes/colors yet</p>
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                                <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                     <th className="pb-2 text-left">Size/Color</th>
                                     <th className="pb-2 text-left">Code</th>
                                     <th className="pb-2 text-right">Stock</th>
@@ -581,7 +581,7 @@ export default function ProductsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Styles</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                         {styles.length} styles
                         {lowStockCount > 0 && (
                             <span className="ml-2 text-amber-600 font-medium">· {lowStockCount} low/out of stock</span>
@@ -645,12 +645,12 @@ export default function ProductsPage() {
             ) : error ? (
                 <ErrorState message="Failed to load styles" onRetry={fetchStyles} />
             ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
                     <p className="text-sm">No styles found</p>
                 </div>
             ) : (
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
@@ -675,12 +675,12 @@ export default function ProductsPage() {
                                         <td className="px-4 py-3">
                                             {s.images?.[0]
                                                 ? <img src={s.images[0]} alt={s.name} className="w-10 h-10 object-cover rounded-xl" />
-                                                : <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-300 text-lg">?</div>
+                                                : <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 text-lg">?</div>
                                             }
                                         </td>
                                         <td className="px-4 py-3 font-medium text-gray-800">{s.name}</td>
-                                        <td className="px-4 py-3 font-mono text-gray-500 text-xs">{s.styleCode || <span className="text-gray-400">—</span>}</td>
-                                        <td className="px-4 py-3 text-gray-500">{s.category || <span className="text-gray-400">—</span>}</td>
+                                        <td className="px-4 py-3 font-mono text-gray-500 text-xs">{s.styleCode || <span className="text-gray-500">—</span>}</td>
+                                        <td className="px-4 py-3 text-gray-500">{s.category || <span className="text-gray-500">—</span>}</td>
                                         <td className="px-4 py-3 text-right text-gray-800">KES {Number(s.basePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-4 py-3 text-gray-500">{(s.variants || []).length}</td>
                                         <td className="px-4 py-3"><StockBadge stock={stock} /></td>

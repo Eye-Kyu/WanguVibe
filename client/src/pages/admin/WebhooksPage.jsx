@@ -18,10 +18,10 @@ function CreateWebhookModal({ onSave, onClose, submitting }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">Add Webhook</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
                 <div className="p-5 space-y-4">
                     <div>
@@ -67,7 +67,7 @@ function SecretRevealModal({ secret, onClose }) {
     };
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md p-6 space-y-4">
                 <h2 className="font-semibold text-gray-800">Webhook created</h2>
                 <p className="text-sm text-gray-500">
                     This signing secret is shown once. Use it to verify the <code className="text-xs bg-gray-100 px-1 rounded">X-Webhook-Signature</code> header on deliveries — it won't be shown again.
@@ -151,7 +151,7 @@ export default function WebhooksPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Webhooks</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                         Notify a third-party system when a sale completes or stock changes. See <code className="text-xs bg-gray-100 px-1 rounded">/api/v1/openapi.yaml</code> for payload shapes.
                     </p>
                 </div>
@@ -170,9 +170,9 @@ export default function WebhooksPage() {
             ) : error ? (
                 <ErrorState message="Failed to load webhooks" onRetry={fetchWebhooks} />
             ) : webhooks.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-16">No webhooks configured</p>
+                <p className="text-sm text-gray-500 text-center py-16">No webhooks configured</p>
             ) : (
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">

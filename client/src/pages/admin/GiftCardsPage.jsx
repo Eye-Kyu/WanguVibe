@@ -55,7 +55,7 @@ export default function GiftCardsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Gift Cards</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                         {total.toLocaleString()} card{total !== 1 ? "s" : ""} issued
                         {activeBalance > 0 && <span className="ml-2 text-indigo-600 font-medium">· KES {fmt(activeBalance)} active on this page</span>}
                     </p>
@@ -68,13 +68,13 @@ export default function GiftCardsPage() {
                 </button>
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                 ) : error ? (
                     <ErrorState message="Failed to load gift cards" onRetry={fetchCards} />
                 ) : cards.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-12">No gift cards sold yet — sell one from the POS screen.</p>
+                    <p className="text-sm text-gray-500 text-center py-12">No gift cards sold yet — sell one from the POS screen.</p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>

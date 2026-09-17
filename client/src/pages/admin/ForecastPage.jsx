@@ -65,17 +65,17 @@ export default function ForecastPage() {
                 </div>
             )}
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm">
                 <div className="px-5 py-4 border-b border-gray-100">
                     <h2 className="font-semibold text-gray-800">At-risk variants, most urgent first</h2>
                 </div>
                 {!forecast.length ? (
-                    <p className="text-sm text-gray-400 px-5 py-8 text-center">No variants with recent sales momentum to forecast</p>
+                    <p className="text-sm text-gray-500 px-5 py-8 text-center">No variants with recent sales momentum to forecast</p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                                <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                     <th className="px-5 pb-2 pt-3 text-left">Variant</th>
                                     <th className="px-5 pb-2 pt-3 text-right">Stock</th>
                                     <th className="px-5 pb-2 pt-3 text-right">Velocity/day</th>

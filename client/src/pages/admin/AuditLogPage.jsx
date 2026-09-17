@@ -21,7 +21,7 @@ const ACTION_LABELS = {
 const actionLabel = (action) => ACTION_LABELS[action] || action;
 
 function DetailsCell({ details }) {
-    if (!details || typeof details !== "object") return <span className="text-gray-400">—</span>;
+    if (!details || typeof details !== "object") return <span className="text-gray-500">—</span>;
     const text = Object.entries(details)
         .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
         .join(", ");
@@ -73,7 +73,7 @@ export default function AuditLogPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Audit Log</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{total.toLocaleString()} recorded action{total !== 1 ? "s" : ""}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} recorded action{total !== 1 ? "s" : ""}</p>
                 </div>
                 <button
                     onClick={fetchLogs}
@@ -83,7 +83,7 @@ export default function AuditLogPage() {
                 </button>
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-end">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-end">
                 <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Action</label>
                     <select
@@ -125,13 +125,13 @@ export default function AuditLogPage() {
                 )}
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                 ) : error ? (
                     <ErrorState message="Failed to load audit log" onRetry={fetchLogs} />
                 ) : logs.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-12">No audit entries match these filters.</p>
+                    <p className="text-sm text-gray-500 text-center py-12">No audit entries match these filters.</p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
@@ -145,7 +145,7 @@ export default function AuditLogPage() {
                         <tbody className="divide-y divide-gray-50">
                             {logs.map((log) => (
                                 <tr key={log._id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
+                                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
                                     <td className="px-4 py-2.5">
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                                             {actionLabel(log.action)}

@@ -11,17 +11,17 @@ const RANGE_LABELS = { day: 'Today', week: 'This Week', month: 'This Month' };
 
 function MarginTable({ title, rows, nameKey, nameLabel }) {
     return (
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100">
                 <h2 className="font-semibold text-gray-800">{title}</h2>
             </div>
             {!rows.length ? (
-                <p className="text-sm text-gray-400 px-5 py-8 text-center">No sales in this period</p>
+                <p className="text-sm text-gray-500 px-5 py-8 text-center">No sales in this period</p>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                 <th className="px-5 pb-2 pt-3 text-left">{nameLabel}</th>
                                 {nameKey === 'name' && <th className="px-5 pb-2 pt-3 text-left">Category</th>}
                                 <th className="px-5 pb-2 pt-3 text-right">Qty Sold</th>

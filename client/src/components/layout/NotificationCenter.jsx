@@ -109,12 +109,12 @@ export default function NotificationCenter() {
             </button>
 
             {open && (
-                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50 animate-scale-in origin-top-right">
+                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-sm shadow-xl z-50 animate-scale-in origin-top-right">
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 font-semibold text-sm text-gray-800 dark:text-gray-100 sticky top-0 bg-white dark:bg-gray-900">
                         Notifications{items.length > 0 ? ` (${items.length})` : ''}
                     </div>
                     {items.length === 0 ? (
-                        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">All clear — nothing needs attention</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">All clear — nothing needs attention</p>
                     ) : (
                         <ul className="divide-y divide-gray-50 dark:divide-gray-800">
                             {items.map((n) => (

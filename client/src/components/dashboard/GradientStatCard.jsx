@@ -14,7 +14,7 @@ const GRADIENTS = {
 export default function GradientStatCard({ label, value, trend, trendLabel, sub, variant = 'indigo' }) {
     const hasTrend = trend !== null && trend !== undefined;
     return (
-        <div className={`relative overflow-hidden rounded-2xl p-5 flex flex-col gap-1 text-white shadow-lg shadow-indigo-950/10 bg-gradient-to-br ${GRADIENTS[variant]}`}>
+        <div className={`relative overflow-hidden rounded-sm p-5 flex flex-col gap-1 text-white shadow-lg shadow-indigo-950/10 bg-gradient-to-br ${GRADIENTS[variant]}`}>
             <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-white/10 blur-2xl pointer-events-none" />
             <p className="text-xs font-semibold text-white/75 uppercase tracking-wider relative">{label}</p>
             <p className="text-2xl font-bold text-white truncate relative">{value}</p>

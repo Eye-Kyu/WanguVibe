@@ -76,13 +76,13 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
                     <div>
                         <h2 className="font-semibold text-gray-800">Layaway</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">{layaway.customer?.name || 'Unknown customer'}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{layaway.customer?.name || 'Unknown customer'}</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
 
                 <div className="overflow-y-auto flex-1">
@@ -98,22 +98,22 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
                     </div>
 
                     <div className="px-5 py-3 border-b border-gray-100">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-1.5">Items</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1.5">Items</p>
                         {layaway.items?.map((item, i) => (
                             <div key={i} className="flex justify-between text-sm py-1">
-                                <span className="text-gray-600">{item.styleName} <span className="text-gray-400">({item.size}/{item.color})</span> × {item.quantity}</span>
+                                <span className="text-gray-600">{item.styleName} <span className="text-gray-500">({item.size}/{item.color})</span> × {item.quantity}</span>
                                 <span className="font-medium text-gray-700">KES {fmt(item.unitPrice * item.quantity * (1 - item.discount / 100))}</span>
                             </div>
                         ))}
                     </div>
 
                     <div className="px-5 py-3 border-b border-gray-100">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-1.5">Payment History</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1.5">Payment History</p>
                         <table className="w-full text-sm">
                             <tbody className="divide-y divide-gray-50">
                                 {layaway.payments?.map((p, i) => (
                                     <tr key={i}>
-                                        <td className="py-1.5 text-gray-400 text-xs whitespace-nowrap">{new Date(p.paidAt).toLocaleString()}</td>
+                                        <td className="py-1.5 text-gray-500 text-xs whitespace-nowrap">{new Date(p.paidAt).toLocaleString()}</td>
                                         <td className="py-1.5 text-gray-600 text-xs capitalize">{p.method.replace('_', ' ')}</td>
                                         <td className="py-1.5 text-gray-500 text-xs">{p.cashier?.name || '—'}</td>
                                         <td className="py-1.5 text-right font-semibold text-green-600">+KES {fmt(p.amount)}</td>
@@ -125,7 +125,7 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
 
                     {isActive && (
                         <div className="px-5 py-3 border-b border-gray-100 space-y-2">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Record Payment</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Record Payment</p>
                             <div className="flex gap-2">
                                 <input
                                     type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)}
@@ -169,7 +169,7 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
                                     Refund as store credit
                                 </button>
                             </div>
-                            <button onClick={() => setConfirmingCancel(false)} className="w-full text-xs text-gray-400 hover:text-gray-600">Never mind</button>
+                            <button onClick={() => setConfirmingCancel(false)} className="w-full text-xs text-gray-500 hover:text-gray-600">Never mind</button>
                         </div>
                     ) : isActive ? (
                         <div className="flex gap-2">
@@ -231,7 +231,7 @@ export default function LayawaysPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">Layaways</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">{total.toLocaleString()} layaway{total !== 1 ? 's' : ''}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} layaway{total !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <select
@@ -250,13 +250,13 @@ export default function LayawaysPage() {
                 </div>
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="p-4 space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                 ) : error ? (
                     <ErrorState message="Failed to load layaways" onRetry={fetchLayaways} />
                 ) : layaways.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-12">No layaways found.</p>
+                    <p className="text-sm text-gray-500 text-center py-12">No layaways found.</p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
@@ -280,7 +280,7 @@ export default function LayawaysPage() {
                                             {l.status}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{new Date(l.createdAt).toLocaleString()}</td>
+                                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{new Date(l.createdAt).toLocaleString()}</td>
                                     <td className="px-4 py-2.5 text-right">
                                         <button onClick={() => setDetailLayaway(l)} className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">
                                             View

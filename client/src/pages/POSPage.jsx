@@ -63,7 +63,7 @@ const StyleCard = memo(({ style, onOpen }) => {
             </div>
             <div className="p-2.5">
                 <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm leading-tight line-clamp-2">{style.name}</p>
-                {style.styleCode && <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono mt-0.5 truncate">{style.styleCode}</p>}
+                {style.styleCode && <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono mt-0.5 truncate">{style.styleCode}</p>}
                 <p className={`font-bold text-sm mt-1.5 ${outOfStock ? 'text-red-400' : 'text-green-700'}`}>
                     {stylePriceLabel(style)}
                 </p>
@@ -90,16 +90,16 @@ const VariantPicker = memo(({ style, onClose, onSelect }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex gap-3 items-center">
                     {style.images?.[0]
                         ? <img src={style.images[0]} alt={style.name} className="w-14 h-14 rounded-xl object-cover border border-gray-100 dark:border-gray-800" />
                         : <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-300 dark:text-gray-400"><IconPhoto className="w-7 h-7" /></div>}
                     <div className="min-w-0">
                         <p className="font-bold text-gray-800 dark:text-gray-100 text-sm truncate">{style.name}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">{stylePriceLabel(style)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{stylePriceLabel(style)}</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close" className="ml-auto text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="ml-auto text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
                 </div>
                 <div className="p-5 space-y-4">
                     {Object.entries(byColor).map(([color, variants]) => (
@@ -129,7 +129,7 @@ const VariantPicker = memo(({ style, onClose, onSelect }) => {
                         </div>
                     ))}
                     {Object.keys(byColor).length === 0 && (
-                        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No size/color variants set up for this style yet.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No size/color variants set up for this style yet.</p>
                     )}
                 </div>
             </div>
@@ -151,7 +151,7 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
             <div className="flex items-start justify-between">
                 <div className="min-w-0 pr-2">
                     <p className="font-medium text-gray-800 dark:text-gray-100 text-sm leading-tight truncate">{item.styleName}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{item.size} / {item.color}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">{item.size} / {item.color}</p>
                 </div>
                 <button
                     onClick={() => onRemove(item.variantId)}
@@ -163,7 +163,7 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                     </svg>
                 </button>
             </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">KES {item.unitPrice.toFixed(2)} each</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">KES {item.unitPrice.toFixed(2)} each</p>
             <div className="flex items-center justify-between mt-1.5 gap-2">
                 <div className="flex items-center gap-1">
                     <button
@@ -187,7 +187,7 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                         onChange={e => onDiscountChange(item.variantId, e.target.value)}
                         className="w-10 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-green-300"
                     />
-                    <span className="text-[11px] text-gray-400 dark:text-gray-500">%</span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">%</span>
                 </div>
                 <p className="text-sm font-bold text-green-700 tabular-nums">
                     KES {calcTotal(item).toFixed(2)}
@@ -208,7 +208,7 @@ const OpenShiftModal = memo(({ onOpen, submitting }) => {
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-t-2xl">
                     <p className="font-bold">Open Shift</p>
                     <p className="text-xs opacity-80 mt-0.5">Count the cash drawer before ringing up any sales</p>
@@ -245,7 +245,7 @@ const CloseShiftModal = memo(({ shift, onClose, onConfirm, submitting }) => {
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div className="px-5 py-4 bg-gradient-to-br from-gray-800 to-gray-950 text-white rounded-t-2xl">
                     <p className="font-bold">Close Shift</p>
                     <p className="text-xs opacity-70 mt-0.5">Opened with KES {shift.openingFloat.toFixed(2)} float</p>
@@ -288,7 +288,7 @@ const SellGiftCardModal = memo(({ onClose, onAdd }) => {
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-t-2xl flex items-center gap-2">
                     <IconGift className="w-5 h-5" />
                     <p className="font-bold">Sell Gift Card</p>
@@ -330,20 +330,20 @@ SellGiftCardModal.displayName = 'SellGiftCardModal';
 // the instant the cashier clicks confirm.
 const MpesaWaitingModal = memo(({ status, resultMessage, onCancel, onRetry }) => (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-        <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center">
+        <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center">
             {status === 'waiting' && (
                 <>
                     <div className="w-14 h-14 mx-auto mb-4 rounded-full border-4 border-green-200 border-t-green-600 animate-spin" />
                     <p className="font-bold text-gray-800 dark:text-gray-100">Check customer's phone…</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Waiting for them to enter their M-Pesa PIN</p>
-                    <button onClick={onCancel} className="mt-5 text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors">Cancel</button>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Waiting for them to enter their M-Pesa PIN</p>
+                    <button onClick={onCancel} className="mt-5 text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors">Cancel</button>
                 </>
             )}
             {(status === 'failed' || status === 'timed_out') && (
                 <>
                     <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center text-red-500"><IconX className="w-6 h-6" /></div>
                     <p className="font-bold text-gray-800 dark:text-gray-100">{status === 'timed_out' ? 'No response in time' : 'Payment failed'}</p>
-                    {resultMessage && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">{resultMessage}</p>}
+                    {resultMessage && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">{resultMessage}</p>}
                     <div className="flex gap-3 mt-5">
                         <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
                         <button onClick={onRetry} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-colors">Try Again</button>
@@ -397,9 +397,9 @@ const CustomerPicker = memo(({ selected, onSelect }) => {
             {query.trim() && (
                 <div className="mt-1 border border-gray-100 dark:border-gray-800 rounded-xl divide-y divide-gray-50 dark:divide-gray-800 max-h-40 overflow-y-auto">
                     {searching ? (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 px-3 py-2">Searching…</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">Searching…</p>
                     ) : results.length === 0 ? (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 px-3 py-2">No matching customers</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No matching customers</p>
                     ) : results.map(c => (
                         <button
                             key={c._id}
@@ -407,7 +407,7 @@ const CustomerPicker = memo(({ selected, onSelect }) => {
                             className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between"
                         >
                             <span className="text-gray-700 dark:text-gray-300">{c.name}{c.phone ? ` · ${c.phone}` : ''}</span>
-                            <span className="text-gray-400 dark:text-gray-500">KES {c.storeCreditBalance.toFixed(2)}</span>
+                            <span className="text-gray-500 dark:text-gray-400">KES {c.storeCreditBalance.toFixed(2)}</span>
                         </button>
                     ))}
                 </div>
@@ -523,7 +523,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div className="px-5 py-4 bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-t-2xl">
                     <p className="text-sm font-medium opacity-80">{t('pos.payment.amountDue')}</p>
                     <p className="text-3xl font-black tabular-nums mt-0.5">
@@ -649,7 +649,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                                 placeholder="e.g. GC-3F9A2B1C0D"
                                                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                             />
-                                            {giftCardChecking && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Checking…</p>}
+                                            {giftCardChecking && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Checking…</p>}
                                             {!giftCardChecking && giftCardInfo === 'notfound' && (
                                                 <p className="text-[11px] text-red-500 mt-1">No gift card found for that code</p>
                                             )}
@@ -679,7 +679,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                 placeholder="e.g. 0712 345 678"
                                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
                             />
-                            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">An STK push prompt will be sent to this number</p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">An STK push prompt will be sent to this number</p>
                         </div>
                     )}
 
@@ -705,7 +705,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                 placeholder="e.g. GC-3F9A2B1C0D"
                                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-300"
                             />
-                            {giftCardChecking && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">Checking…</p>}
+                            {giftCardChecking && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">Checking…</p>}
                             {!giftCardChecking && giftCardInfo === 'notfound' && (
                                 <p className="text-[11px] text-red-500 mt-1.5">No gift card found for that code</p>
                             )}
@@ -862,7 +862,7 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-t-2xl">
                     <p className="text-sm font-medium opacity-80">Layaway Total</p>
                     <p className="text-3xl font-black tabular-nums mt-0.5">
@@ -888,7 +888,7 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
                             className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         />
                         {depositNum > 0 && depositNum < total && (
-                            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">Balance due after deposit: KES {balanceAfterDeposit.toFixed(2)}</p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">Balance due after deposit: KES {balanceAfterDeposit.toFixed(2)}</p>
                         )}
                         {depositNum >= total && depositNum > 0 && (
                             <p className="text-[11px] text-red-500 mt-1">Deposit must be less than the total — pay in full as a normal sale instead</p>
@@ -926,7 +926,7 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
                                 placeholder="e.g. GC-3F9A2B1C0D"
                                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-300"
                             />
-                            {giftCardChecking && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">Checking…</p>}
+                            {giftCardChecking && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">Checking…</p>}
                             {!giftCardChecking && giftCardInfo === 'notfound' && (
                                 <p className="text-[11px] text-red-500 mt-1.5">No gift card found for that code</p>
                             )}
@@ -994,12 +994,12 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div id="receipt-print" className="p-6">
                     <div className="text-center mb-5">
                         <img src={businessSettings.logoPath} alt="Logo" className="w-12 h-12 object-contain mx-auto mb-2" onError={e => e.target.style.display='none'} />
                         <h1 className="font-bold text-base tracking-widest text-gray-800 dark:text-gray-100">{businessSettings.name.toUpperCase()}</h1>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500">{businessSettings.address}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">{businessSettings.address}</p>
                     </div>
 
                     <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-3 mb-3 font-mono text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5">
@@ -1034,10 +1034,10 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                         {sale.items?.map((item, i) => (
                             <div key={i}>
                                 <div className="flex justify-between">
-                                    <span className="flex-1 truncate pr-2">{item.styleName} <span className="text-gray-400 dark:text-gray-500">({item.size}/{item.color})</span></span>
+                                    <span className="flex-1 truncate pr-2">{item.styleName} <span className="text-gray-500 dark:text-gray-400">({item.size}/{item.color})</span></span>
                                     <span className="font-semibold">KES {(item.unitPrice * item.quantity * (1 - item.discount / 100)).toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between text-gray-400 dark:text-gray-500 text-[10px]">
+                                <div className="flex justify-between text-gray-500 dark:text-gray-400 text-[10px]">
                                     <span>{item.quantity} × KES {item.unitPrice.toFixed(2)}{item.discount > 0 ? ` (−${item.discount}%)` : ''}</span>
                                 </div>
                             </div>
@@ -1073,28 +1073,28 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                                     <span>KES {g.amount.toFixed(2)}</span>
                                 </div>
                             ))}
-                            <p className="text-gray-400 dark:text-gray-500 text-[10px]">Keep this code safe — it's required to redeem the card.</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-[10px]">Keep this code safe — it's required to redeem the card.</p>
                         </div>
                     )}
 
                     {qrUrl && (
                         <div className="mt-4 flex flex-col items-center">
                             <img src={qrUrl} alt="Receipt lookup QR" className="w-16 h-16" />
-                            <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1">Scan to look up this receipt</p>
+                            <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-1">Scan to look up this receipt</p>
                         </div>
                     )}
 
                     {sale.etimsStatus === 'accepted' && etimsQrUrl && (
                         <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-3 mt-3 flex flex-col items-center">
                             <img src={etimsQrUrl} alt="KRA eTIMS QR" className="w-16 h-16" />
-                            <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1 font-mono">eTIMS Invoice: {sale.etimsInvoiceNumber}</p>
+                            <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-1 font-mono">eTIMS Invoice: {sale.etimsInvoiceNumber}</p>
                         </div>
                     )}
                     {sale.etimsStatus === 'unreachable' && (
                         <p className="text-center text-[9px] text-amber-500 mt-3">eTIMS invoice pending — will be submitted when reachable</p>
                     )}
 
-                    <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 mt-3">{businessSettings.receiptFooter}</p>
+                    <p className="text-center text-[10px] text-gray-500 dark:text-gray-400 mt-3">{businessSettings.receiptFooter}</p>
                 </div>
 
                 <div className="flex gap-3 px-5 pb-5">
@@ -1625,12 +1625,12 @@ export default function POSPage() {
                         onError={e => { e.target.style.display = 'none'; }} />
                     <div className="leading-tight">
                         <p className="font-black text-gray-800 dark:text-gray-100 text-sm">{businessSettings.name}</p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">{businessSettings.tagline}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{businessSettings.tagline}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="hidden lg:flex items-center gap-2 text-[10px] text-gray-400 dark:text-gray-500 mr-2">
+                    <div className="hidden lg:flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mr-2">
                         <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg font-mono">F2</kbd><span>search</span>
                         <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg font-mono">1–9</kbd><span>category</span>
                         <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg font-mono">Ctrl+B</kbd><span>scan</span>
@@ -1694,7 +1694,7 @@ export default function POSPage() {
                         </div>
                         <div className="hidden md:block leading-tight">
                             <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{user?.name || 'Cashier'}</p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 capitalize">{user?.role || ''}</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 capitalize">{user?.role || ''}</p>
                         </div>
                     </div>
 
@@ -1739,7 +1739,7 @@ export default function POSPage() {
 
                     <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-2.5 flex gap-2 flex-shrink-0">
                         <div className="relative flex-1">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                             <input
@@ -1752,7 +1752,7 @@ export default function POSPage() {
                                 className="w-full pl-9 pr-8 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-gray-50 dark:bg-gray-900 focus:bg-white dark:focus:bg-gray-800 transition-colors"
                             />
                             {search && (
-                                <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none">×</button>
+                                <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none">×</button>
                             )}
                         </div>
 
@@ -1804,7 +1804,7 @@ export default function POSPage() {
                                         ? 'bg-indigo-600 text-white border-indigo-600'
                                         : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300 bg-white dark:bg-gray-900'}`}
                                 >
-                                    <span className={`hidden lg:inline text-[10px] font-mono opacity-60 ${active ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>{idx + 1}</span>
+                                    <span className={`hidden lg:inline text-[10px] font-mono opacity-60 ${active ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>{idx + 1}</span>
                                     {c === 'all' ? t('pos.categories.all') : c}
                                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${active ? 'bg-white dark:bg-gray-900/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                                         {count}
@@ -1819,11 +1819,17 @@ export default function POSPage() {
                             <div className="rounded-xl overflow-hidden border-2 border-indigo-400 shadow-xl">
                                 <BarcodeScannerComponent width={300} height={200} onUpdate={handleScan} />
                             </div>
+                            {/* This panel's bg-gray-900 backdrop is fixed regardless of
+                                site theme (a camera view needs a dark surround
+                                either way), so its own text intentionally has no
+                                dark: variant — pairing one here would have made
+                                dark-site-theme text harder to read against the
+                                exact same background, not easier. */}
                             <div className="text-white text-xs space-y-1 hidden md:block">
                                 <p className="font-semibold text-indigo-300 flex items-center gap-1.5"><IconCamera className="w-4 h-4" /> Camera Scanner</p>
-                                <p className="text-gray-400 dark:text-gray-500">Point camera at a garment's barcode</p>
-                                <p className="text-gray-400 dark:text-gray-500 text-[10px]">Or type it in search + Enter</p>
-                                <button onClick={() => setShowScanner(false)} className="mt-2 flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-white text-xs border border-gray-600 rounded-lg px-2 py-1 transition-colors">
+                                <p className="text-gray-400">Point camera at a garment's barcode</p>
+                                <p className="text-gray-400 text-[10px]">Or type it in search + Enter</p>
+                                <button onClick={() => setShowScanner(false)} className="mt-2 flex items-center gap-1 text-gray-400 hover:text-white text-xs border border-gray-600 rounded-lg px-2 py-1 transition-colors">
                                     <IconX className="w-3 h-3" /> Close
                                 </button>
                             </div>
@@ -1844,10 +1850,10 @@ export default function POSPage() {
                                 ))}
                             </div>
                         ) : styles.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-20">
+                            <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 py-20">
                                 <IconSearch className="w-12 h-12 mb-4 text-gray-300 dark:text-gray-400" />
                                 <p className="font-semibold text-gray-500 dark:text-gray-400">No styles found</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {category !== 'all' ? `No items in "${category}"` : 'Try a different search'}
                                 </p>
                                 {(search || category !== 'all') && (
@@ -1862,7 +1868,7 @@ export default function POSPage() {
                         ) : (
                             <>
                                 {(search || category !== 'all') && (
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                                         {styles.length} style{styles.length !== 1 ? 's' : ''}
                                         {category !== 'all' ? ` in ${category}` : ''}
                                         {search ? ` matching "${search}"` : ''}
@@ -1907,7 +1913,7 @@ export default function POSPage() {
                                     {t('pos.cart.clear')}
                                 </button>
                             )}
-                            <button onClick={() => setMobileCartOpen(false)} className="lg:hidden text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                            <button onClick={() => setMobileCartOpen(false)} className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
@@ -1918,13 +1924,13 @@ export default function POSPage() {
                     <div className="flex-1 overflow-y-auto px-4 py-1">
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-center py-16">
-                                <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                                <div className="w-16 h-16 rounded-sm bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-gray-300 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                 </div>
-                                <p className="font-semibold text-gray-400 dark:text-gray-500 text-sm">{t('pos.cart.emptyTitle')}</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('pos.cart.emptySubtitle')}</p>
+                                <p className="font-semibold text-gray-500 dark:text-gray-400 text-sm">{t('pos.cart.emptyTitle')}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('pos.cart.emptySubtitle')}</p>
                             </div>
                         ) : (
                             cart.map(item => (

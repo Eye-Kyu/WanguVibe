@@ -8,10 +8,10 @@ function CreateKeyModal({ onSave, onClose, submitting }) {
     const [label, setLabel] = useState('');
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                     <h2 className="font-semibold text-gray-800">New API Key</h2>
-                    <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
                 </div>
                 <div className="p-5">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Label *</label>
@@ -44,7 +44,7 @@ function KeyRevealModal({ apiKey, onClose }) {
     };
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md p-6 space-y-4">
                 <h2 className="font-semibold text-gray-800">API key created</h2>
                 <p className="text-sm text-gray-500">
                     This key is shown once. Send it as the <code className="text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header on requests to <code className="text-xs bg-gray-100 px-1 rounded">/api/v1/*</code> — it won't be shown again. If lost, revoke it and create a new one.
@@ -119,7 +119,7 @@ export default function ApiKeysPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-800">API Keys</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                         For third-party read access to <code className="text-xs bg-gray-100 px-1 rounded">/api/v1/*</code> (sales, styles, variants). See <code className="text-xs bg-gray-100 px-1 rounded">/api/v1/openapi.yaml</code> for docs.
                     </p>
                 </div>
@@ -138,9 +138,9 @@ export default function ApiKeysPage() {
             ) : error ? (
                 <ErrorState message="Failed to load API keys" onRetry={fetchKeys} />
             ) : keys.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-16">No API keys yet</p>
+                <p className="text-sm text-gray-500 text-center py-16">No API keys yet</p>
             ) : (
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">

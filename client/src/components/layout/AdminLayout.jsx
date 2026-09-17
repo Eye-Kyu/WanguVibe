@@ -6,7 +6,7 @@ import CommandPalette from './CommandPalette';
 
 const AdminLayout = () => {
     return (
-        <div className="flex h-screen w-screen">
+        <div className="flex h-screen w-screen overflow-hidden">
             <Sidebar />
             <div className="flex-1 flex flex-col">
                 <Topbar />

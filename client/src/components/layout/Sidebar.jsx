@@ -29,19 +29,24 @@ const Sidebar = () => {
         } ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`;
 
     return (
-        <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col flex-shrink-0 transition-all duration-200`}>
-            <div className={`flex items-center mb-6 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        // h-screen + flex-shrink-0 pins this to the full viewport height as
+        // its own independent box; only the <nav> list below scrolls
+        // internally (overflow-y-auto) when there are more items than fit,
+        // so the sidebar never forces the whole page to scroll and the
+        // header/collapse toggle stay pinned in place while the nav list moves.
+        <aside className={`${collapsed ? 'w-16' : 'w-64'} h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col flex-shrink-0 transition-all duration-200`}>
+            <div className={`flex items-center mb-6 flex-shrink-0 ${collapsed ? 'justify-center' : 'justify-between'}`}>
                 {!collapsed && <h2 className="text-xl font-bold px-1 text-gray-900 dark:text-gray-100">Admin Panel</h2>}
                 <button
                     onClick={toggleCollapsed}
                     title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                    className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
                 >
                     <IconChevronLeft className={`w-4 h-4 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
                 </button>
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-1 flex-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
                 {ADMIN_NAV_ITEMS.map((item) => (
                     <NavLink
                         key={item.to}

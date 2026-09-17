@@ -110,7 +110,7 @@ const ONBOARDING_STEPS = [
 
 function OnboardingBanner() {
     return (
-        <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-950/10 animate-fade-in">
+        <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 rounded-sm p-6 text-white shadow-lg shadow-indigo-950/10 animate-fade-in">
             <h2 className="text-lg font-bold">Welcome to Wanguvibe POS 👋</h2>
             <p className="text-sm text-white/80 mt-1 mb-4">Your catalog is empty — here's how to get selling:</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -256,7 +256,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* ── Range Analysis ────────────────────────────────────────── */}
-            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm">
                 {/* Controls row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                     <h2 className="font-semibold text-gray-800 dark:text-gray-100">Sales Overview</h2>
@@ -310,11 +310,11 @@ const AdminDashboard = () => {
                 <PieChartBestsellers data={data?.topProducts ?? []} />
 
                 {/* Payment Methods Donut */}
-                <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm p-5">
                     <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Payment Methods</h2>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">{RANGE_LABELS[range]}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{RANGE_LABELS[range]}</p>
                     {!data?.paymentBreakdown?.length ? (
-                        <p className="text-gray-400 dark:text-gray-500 text-center py-16 text-sm">No payment data for this period.</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-center py-16 text-sm">No payment data for this period.</p>
                     ) : (
                         <>
                             <ResponsiveContainer width="100%" height={220}>
@@ -353,7 +353,7 @@ const AdminDashboard = () => {
                                         </span>
                                         <span className="font-semibold text-gray-900 dark:text-gray-100">
                                             KES {fmt(p.total)}
-                                            <span className="font-normal text-gray-400 dark:text-gray-500 ml-1">
+                                            <span className="font-normal text-gray-500 dark:text-gray-400 ml-1">
                                                 ({p.count} txn{p.count !== 1 ? 's' : ''})
                                             </span>
                                         </span>
@@ -372,17 +372,17 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Recent Sales table */}
-                <div className="lg:col-span-2 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="lg:col-span-2 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                         <h2 className="font-semibold text-gray-800 dark:text-gray-100">Recent Sales</h2>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             Last {data?.recentSales?.length ?? 0} transactions
                         </p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-gray-50 dark:bg-gray-800/50 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <tr className="bg-gray-50 dark:bg-gray-800/50 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                     <th className="px-5 py-3">ID</th>
                                     <th className="px-5 py-3">Date & Time</th>
                                     <th className="px-5 py-3">Items</th>
@@ -394,14 +394,14 @@ const AdminDashboard = () => {
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                                 {!data?.recentSales?.length ? (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">
+                                        <td colSpan={6} className="px-5 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">
                                             No sales recorded yet
                                         </td>
                                     </tr>
                                 ) : (
                                     data.recentSales.map(sale => (
                                         <tr key={sale._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                                            <td className="px-5 py-3 font-mono text-xs text-gray-400 dark:text-gray-500">
+                                            <td className="px-5 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">
                                                 #{sale._id.slice(-6).toUpperCase()}
                                             </td>
                                             <td className="px-5 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
@@ -431,7 +431,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Low Stock Alerts */}
-                <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                         <h2 className="font-semibold text-gray-800 dark:text-gray-100">Low Stock Alerts</h2>
                         {data?.lowStockItems?.length > 0 && (
@@ -443,7 +443,7 @@ const AdminDashboard = () => {
                     {!data?.lowStockItems?.length ? (
                         <div className="px-5 py-10 text-center">
                             <p className="text-green-600 dark:text-green-400 font-semibold text-sm">All stock healthy</p>
-                            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">No variants below their reorder threshold</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">No variants below their reorder threshold</p>
                         </div>
                     ) : (
                         <ul className="divide-y divide-gray-50 dark:divide-gray-800">

@@ -14,11 +14,11 @@ function CustomTooltip({ active, payload }) {
 
 export default function PieChartBestsellers({ data = [] }) {
     return (
-        <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+        <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm p-5">
             <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Top 5 Bestsellers</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Units sold in selected period</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Units sold in selected period</p>
             {data.length === 0 ? (
-                <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">
+                <div className="flex items-center justify-center h-48 text-gray-500 dark:text-gray-400 text-sm">
                     No sales data for this period.
                 </div>
             ) : (

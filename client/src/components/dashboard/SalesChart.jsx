@@ -14,7 +14,7 @@ function CustomTooltip({ active, payload, label }) {
             <p className="text-gray-500 dark:text-gray-400 mb-1">{label}</p>
             <p className="font-bold text-indigo-600 dark:text-indigo-400">KES {Number(payload[0].value).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
             {payload[0].payload.count !== undefined && (
-                <p className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{payload[0].payload.count} transaction{payload[0].payload.count !== 1 ? 's' : ''}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{payload[0].payload.count} transaction{payload[0].payload.count !== 1 ? 's' : ''}</p>
             )}
         </div>
     );
@@ -35,7 +35,7 @@ export default function SalesChart({ data = [], range = 'day' }) {
                 {RANGE_TITLE[range] ?? 'Sales Trend'}
             </h3>
             {data.length === 0 ? (
-                <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">
+                <div className="flex items-center justify-center h-48 text-gray-500 dark:text-gray-400 text-sm">
                     No sales recorded for this period.
                 </div>
             ) : (

@@ -32,15 +32,15 @@ function CustomerValueSection() {
 
     useEffect(() => { fetchCustomerValue(); }, [fetchCustomerValue]);
 
-    if (loading) return <p className="text-sm text-gray-400 text-center py-8">Loading…</p>;
+    if (loading) return <p className="text-sm text-gray-500 text-center py-8">Loading…</p>;
     if (error) return <ErrorState message="Failed to load customer value report" onRetry={fetchCustomerValue} />;
-    if (!rows?.length) return <p className="text-sm text-gray-400 text-center py-8">No customer purchases yet</p>;
+    if (!rows?.length) return <p className="text-sm text-gray-500 text-center py-8">No customer purchases yet</p>;
 
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                    <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                         <th className="px-5 pb-2 pt-3 text-left">Customer</th>
                         <th className="px-5 pb-2 pt-3 text-right">Orders</th>
                         <th className="px-5 pb-2 pt-3 text-right">Lifetime Spend</th>
@@ -101,16 +101,16 @@ function StaffLeaderboardSection() {
                 </div>
             </div>
             {loading ? (
-                <p className="text-sm text-gray-400 text-center py-8">Loading…</p>
+                <p className="text-sm text-gray-500 text-center py-8">Loading…</p>
             ) : error ? (
                 <ErrorState message="Failed to load staff performance report" onRetry={fetchStaff} />
             ) : !rows?.length ? (
-                <p className="text-sm text-gray-400 text-center py-8">No sales in this period</p>
+                <p className="text-sm text-gray-500 text-center py-8">No sales in this period</p>
             ) : (
                 <div className="overflow-x-auto mt-3">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                                 <th className="px-5 pb-2 pt-3 text-left">Cashier</th>
                                 <th className="px-5 pb-2 pt-3 text-right">Transactions</th>
                                 <th className="px-5 pb-2 pt-3 text-right">Revenue</th>
@@ -150,9 +150,9 @@ function CohortRetentionSection() {
 
     useEffect(() => { fetchCohorts(); }, [fetchCohorts]);
 
-    if (loading) return <p className="text-sm text-gray-400 text-center py-8">Loading…</p>;
+    if (loading) return <p className="text-sm text-gray-500 text-center py-8">Loading…</p>;
     if (error) return <ErrorState message="Failed to load cohort retention report" onRetry={fetchCohorts} />;
-    if (!cohorts?.length) return <p className="text-sm text-gray-400 text-center py-8">Not enough customer purchase history yet</p>;
+    if (!cohorts?.length) return <p className="text-sm text-gray-500 text-center py-8">Not enough customer purchase history yet</p>;
 
     const maxOffset = Math.max(0, ...cohorts.flatMap((c) => c.retention.map((r) => r.monthOffset)));
     const offsets = Array.from({ length: maxOffset + 1 }, (_, i) => i);
@@ -163,7 +163,7 @@ function CohortRetentionSection() {
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                    <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                         <th className="px-5 pb-2 pt-3 text-left">Cohort</th>
                         <th className="px-5 pb-2 pt-3 text-right">Size</th>
                         {offsets.map((o) => (
@@ -180,7 +180,7 @@ function CohortRetentionSection() {
                                 const cell = cellFor(c, o);
                                 return (
                                     <td key={o} className="px-3 py-2.5 text-right text-gray-500">
-                                        {cell ? `${cell.retentionPct}%` : <span className="text-gray-300">—</span>}
+                                        {cell ? `${cell.retentionPct}%` : <span className="text-gray-400">—</span>}
                                     </td>
                                 );
                             })}
@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
                 ))}
             </div>
 
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm">
                 {section === 'customer-value' && <CustomerValueSection />}
                 {section === 'staff' && <StaffLeaderboardSection />}
                 {section === 'cohorts' && <CohortRetentionSection />}

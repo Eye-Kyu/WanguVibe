@@ -34,7 +34,7 @@ const Topbar = ({ title = 'Dashboard' }) => {
                 <button
                     onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
                     title="Open command palette (Ctrl+K)"
-                    className="hidden md:flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="hidden md:flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                     <IconSearch className="w-3.5 h-3.5" />
                     <kbd className="font-mono">Ctrl K</kbd>
@@ -61,7 +61,7 @@ const Topbar = ({ title = 'Dashboard' }) => {
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 leading-tight">
                             {user?.name || 'User'}
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 capitalize leading-tight">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize leading-tight">
                             {user?.role || 'unknown'}
                         </p>
                     </div>

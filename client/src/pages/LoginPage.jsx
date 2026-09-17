@@ -41,7 +41,7 @@ const LoginPage = () => {
             <div className="relative z-10 flex items-center justify-center w-full h-full px-4">
 
                 {/* Card */}
-                <div className="w-full rounded-3xl max-w-md
+                <div className="w-full rounded-sm max-w-md
                     bg-purple-950/20 backdrop-blur-2xl
                     border border-white/20 shadow-2xl
                     p-6 sm:p-8 md:p-10
