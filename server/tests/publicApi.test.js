@@ -31,9 +31,13 @@ describe('apiKeyAuth middleware', () => {
 
     expect(next).toHaveBeenCalled();
     expect(req.apiKey).toBeTruthy();
-    // lastUsedAt update is fire-and-forget — give it a tick to land.
-    await new Promise((r) => setTimeout(r, 50));
-    const stored = await ApiKey.findById(req.apiKey._id);
+    // lastUsedAt update is fire-and-forget — poll (bounded) for it to land;
+    // a fixed short sleep was flaky on slower CI runners.
+    let stored = await ApiKey.findById(req.apiKey._id);
+    for (let i = 0; i < 40 && !stored.lastUsedAt; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      stored = await ApiKey.findById(req.apiKey._id);
+    }
     expect(stored.lastUsedAt).toBeTruthy();
   });
 

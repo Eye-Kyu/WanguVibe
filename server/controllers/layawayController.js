@@ -6,6 +6,8 @@ const GiftCard = require('../models/GiftCard');
 const Sale = require('../models/Sale');
 const StoreCreditLedger = require('../models/StoreCreditLedger');
 const HttpError = require('../utils/httpError');
+const { isPositiveAmount, normalizeLineItems, normalizeCartDiscount, assertTotalMatches } = require('../utils/saleValidation');
+const { assertDiscountAllowed, resolveApproval } = require('../utils/approval');
 const { logAudit } = require('../utils/auditLogger');
 const { reportError } = require('../utils/reportError');
 const { submitSaleToEtims, populateSale } = require('./salesController');
@@ -61,13 +63,16 @@ async function applyPaymentLine({ method, amount, customer, giftCardCode, cashie
 // decremented now (the items are physically set aside), not at completion.
 exports.createLayaway = async (req, res) => {
   if (!req.user || !req.user.id) return res.status(401).json({ error: 'User authentication required' });
-  const { items, totalAmount, cartDiscount, customer, dueDate, deposit } = req.body;
+  const { items: rawItems, totalAmount, cartDiscount: rawCartDiscount, customer, dueDate, deposit } = req.body;
 
   try {
     if (!customer) throw new HttpError(400, 'A customer is required for a layaway');
-    if (!items || !Array.isArray(items) || items.length === 0) throw new HttpError(400, 'Invalid or empty items');
-    if (!totalAmount || totalAmount <= 0) throw new HttpError(400, 'Invalid total amount');
-    if (!deposit || !deposit.amount || deposit.amount <= 0) throw new HttpError(400, 'A deposit amount greater than 0 is required');
+    const items = normalizeLineItems(rawItems);
+    if (!isPositiveAmount(totalAmount)) throw new HttpError(400, 'Invalid total amount');
+    const cartDiscount = normalizeCartDiscount(rawCartDiscount);
+    const approvedBy = await resolveApproval(req.body);
+    assertDiscountAllowed(items, cartDiscount, { role: req.user.role, approvedBy });
+    if (!deposit || !isPositiveAmount(deposit.amount)) throw new HttpError(400, 'A deposit amount greater than 0 is required');
     if (deposit.amount >= totalAmount) throw new HttpError(400, 'Deposit must be less than the total — pay in full as a normal sale instead');
     const methodNorm = normalizeMethod(deposit.method);
     if (!LAYAWAY_PAYMENT_METHODS.includes(methodNorm)) throw new HttpError(400, `Invalid payment method: "${deposit.method}"`);
@@ -87,13 +92,6 @@ exports.createLayaway = async (req, res) => {
           const variant = await Variant.findById(item.variant).populate('style', 'name basePrice').session(session);
           if (!variant) throw new HttpError(404, `Variant ${item.variant} not found`);
           if (!variant.style) throw new HttpError(404, `Style for variant ${item.variant} not found`);
-          if (variant.stock < item.quantity) {
-            throw new HttpError(400, `Insufficient stock for ${variant.style.name} (${variant.size}/${variant.color}). Only ${variant.stock} available.`);
-          }
-          if (item.discount < 0 || item.discount > 100) {
-            throw new HttpError(400, `Discount for ${variant.style.name} must be between 0 and 100%`);
-          }
-
           const unitPrice = variant.priceOverride ?? variant.style.basePrice;
           calculatedTotal += unitPrice * item.quantity * (1 - item.discount / 100);
 
@@ -104,17 +102,22 @@ exports.createLayaway = async (req, res) => {
             color: variant.color,
             unitPrice,
             quantity: item.quantity,
-            discount: item.discount || 0,
+            discount: item.discount,
           });
 
-          await Variant.findByIdAndUpdate(variant._id, { $inc: { stock: -item.quantity } }, { session });
+          const decremented = await Variant.findOneAndUpdate(
+            { _id: variant._id, stock: { $gte: item.quantity } },
+            { $inc: { stock: -item.quantity } },
+            { session }
+          );
+          if (!decremented) {
+            throw new HttpError(400, `Insufficient stock for ${variant.style.name} (${variant.size}/${variant.color}). Only ${variant.stock} available.`);
+          }
           changedVariantIds.push(variant._id);
         }
 
-        calculatedTotal = calculatedTotal * (1 - (cartDiscount ?? 0) / 100);
-        if (Math.abs(calculatedTotal - totalAmount) > 0.5) {
-          throw new HttpError(400, 'Total amount does not match calculated total');
-        }
+        calculatedTotal = calculatedTotal * (1 - cartDiscount / 100);
+        assertTotalMatches(calculatedTotal, totalAmount);
 
         const depositLine = await applyPaymentLine({
           method: methodNorm,
@@ -134,6 +137,7 @@ exports.createLayaway = async (req, res) => {
           balanceRemaining: totalAmount - deposit.amount,
           dueDate: dueDate || null,
           cashier: req.user.id,
+          approvedBy: approvedBy || null,
         });
         await layaway.save({ session });
       });
@@ -160,7 +164,7 @@ exports.recordPayment = async (req, res) => {
   try {
     const methodNorm = normalizeMethod(method);
     if (!LAYAWAY_PAYMENT_METHODS.includes(methodNorm)) throw new HttpError(400, `Invalid payment method: "${method}"`);
-    if (!amount || amount <= 0) throw new HttpError(400, 'Payment amount must be greater than 0');
+    if (!isPositiveAmount(amount)) throw new HttpError(400, 'Payment amount must be greater than 0');
     if (methodNorm === 'gift_card' && !giftCardCode) throw new HttpError(400, 'A gift card code is required');
 
     const session = await mongoose.startSession();

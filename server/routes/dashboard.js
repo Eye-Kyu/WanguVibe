@@ -6,6 +6,8 @@ const Variant = require('../models/Variant');
 const Customer = require('../models/Customer');
 const User = require('../models/User');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { buildExceptionsReport, rangeBounds } = require('../services/exceptionsReport');
+const { buildWeeklySummary, formatWeeklySummary, sendWeeklySummary } = require('../services/ownerSummary');
 
 // % change from prev to current; null when no previous data
 const trendPct = (current, prev) =>
@@ -540,8 +542,45 @@ async function getCohortRetention(req, res) {
 
 router.get('/cohorts', protect, adminOnly, getCohortRetention);
 
+// GET /api/dashboard/exceptions?range=day|week|month — adminOnly. Discounts,
+// approvals, returns, voids and till discrepancies per staff member.
+async function getExceptionsReport(req, res) {
+    try {
+        const range = ['day', 'week', 'month'].includes(req.query.range) ? req.query.range : 'day';
+        const report = await buildExceptionsReport(rangeBounds(range));
+        res.json({ range, ...report });
+    } catch (err) {
+        reportError(req, err, 'Exceptions report failed');
+        res.status(500).json({ error: 'Exceptions report failed' });
+    }
+}
+
+router.get('/exceptions', protect, adminOnly, getExceptionsReport);
+
+// GET /api/dashboard/weekly-summary — preview of the owner's weekly digest.
+// POST /api/dashboard/weekly-summary/send — send it now (SMS + push).
+router.get('/weekly-summary', protect, adminOnly, async (req, res) => {
+    try {
+        const summary = await buildWeeklySummary();
+        res.json({ ...summary, text: formatWeeklySummary(summary) });
+    } catch (err) {
+        reportError(req, err, 'Weekly summary failed');
+        res.status(500).json({ error: 'Weekly summary failed' });
+    }
+});
+router.post('/weekly-summary/send', protect, adminOnly, async (req, res) => {
+    try {
+        const result = await sendWeeklySummary();
+        res.json(result);
+    } catch (err) {
+        reportError(req, err, 'Sending weekly summary failed');
+        res.status(500).json({ error: 'Sending weekly summary failed' });
+    }
+});
+
 module.exports = router;
 module.exports.getMarginReport = getMarginReport;
 module.exports.getCustomerValue = getCustomerValue;
 module.exports.getStaffPerformance = getStaffPerformance;
 module.exports.getCohortRetention = getCohortRetention;
+module.exports.getExceptionsReport = getExceptionsReport;

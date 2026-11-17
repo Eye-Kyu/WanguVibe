@@ -17,17 +17,14 @@ npm run lint                # eslint .
 npm run preview              # serve the production build locally
 ```
 
-No automated test suite exists — `server/package.json`'s `test` script is the npm-init placeholder (`echo "Error: no test specified" && exit 1`). The closest thing to test coverage is:
+Server tests are Jest (`server/tests/`, run with `npm test` from `server/`) against a real single-node MongoDB replica set started by `mongodb-memory-server` (transactions need a replica set). Controllers are tested by calling them directly with mock `req`/`res`. Run one file with `npx jest tests/<file>.test.js`. If the C: drive is short on space, point `TEMP`/`TMP` at another drive, since mongod writes its journal there.
 
 ```bash
-# From server/, with the dev server already running against a real DB:
-node scripts/smokeTest.js [baseUrl] [adminPassword]   # live HTTP smoke test of every route — creates and
-                                                          # cleans up its own temp data, checks auth/role
-                                                          # gating and a few validation edge cases, exits
-                                                          # non-zero on any failure
+# From server/, with a server already running against a real (throwaway) DB:
+node scripts/smokeTest.js [baseUrl] <adminPassword>   # live HTTP test of every route; or set SMOKE_ADMIN_PASSWORD
 ```
 
-This hits a real running server and a real database — it is not a substitute for unit tests, and there is no way to run "a single test" in the traditional sense (no Jest/Mocha/etc. configured on either side).
+CI (`.github/workflows/ci.yml`) runs the Jest suite, client lint plus a production build, and the live smoke test.
 
 To bootstrap the first admin account (required before anything else works, since `/api/auth/register` is itself admin-only):
 
@@ -62,7 +59,7 @@ The catalog is deliberately two-tiered, and most catalog/inventory/sales code as
 
 ### Returns/refunds
 
-`Sale.items[].returnedQuantity` and `Sale.refundedAmount` track returns. `POST /api/sales/:id/return` (`salesController.returnSale`) validates the requested return quantity against what's still eligible per line (`quantity - returnedQuantity`), restocks the variant, computes the refund using the same per-item-discount × cart-discount formula used at sale time, and transitions `Sale.status` through `completed → partially_returned → returned`. This is not wrapped in a Mongoose transaction — see Known Issues below.
+`Sale.items[].returnedQuantity` and `Sale.refundedAmount` track returns. `POST /api/sales/:id/return` (`salesController.returnSale`) validates the requested return quantity against what's still eligible per line (`quantity - returnedQuantity`), restocks the variant, computes the refund using the same per-item-discount × cart-discount formula used at sale time, and transitions `Sale.status` through `completed → partially_returned → returned`. It runs in a Mongoose transaction. Sales are never hard-deleted: `POST /api/sales/:id/void` (admin) restocks the items and reverses every payment line, keeping the record with `status: 'voided'`.
 
 ### Auth: two admin-gating patterns coexist
 
@@ -80,10 +77,21 @@ The catalog is deliberately two-tiered, and most catalog/inventory/sales code as
 
 All routes are declared flat in `client/src/App.jsx`; admin-only pages nest under `/admin` via `AdminLayout` + `Sidebar` (`client/src/components/layout/`). `client/src/components/auth/ProtectedRoute.jsx` gates both "must be logged in" (`/pos`) and "must be admin" (`/admin/*`) routes by reading `AuthContext`. `client/src/api/axiosInstance.js` attaches the JWT from `localStorage` to every outgoing request via an interceptor. Business identity (name, currency, logo, receipt footer) is centralized in `client/src/config/businessSettings.js` — new UI should read from there rather than hardcoding boutique-specific strings.
 
-## Known issues / next steps (verified against the current code, not speculative)
+## Money-handling invariants (don't regress these)
 
-- **No transactions around stock+money writes.** `createSale`, `returnSale`, and `restockVariant` each perform multiple independent writes (e.g. decrement stock, then save the sale/log) with no Mongoose session/transaction wrapping them. A crash mid-operation can leave stock out of sync with the sale/log record. Add transactions before building further money-handling features (store credit, gift cards, till reconciliation, etc.).
-- **Two admin-gating middlewares, used inconsistently** (see above) — worth consolidating to one when next touching auth-related routes.
-- **`Style.costPrice` is a dead column** — stored and returned by the API but never read by any report or margin calculation.
-- **Audit logging is one-sided.** `POST /api/audit` exists, is authenticated, and is smoke-tested, but nothing in the client calls it, and there is no `GET /api/audit` to read entries back. Treat it as unbuilt until both a trigger point and a read path exist.
-- **Unused frontend dependencies** — `i18next`, `react-i18next`, `idb`, `dompurify`, and `lodash` are in `client/package.json` with zero imports anywhere in `client/src`. Either start using them or remove them.
+- **Cart pricing** goes through `utils/saleValidation.js` (`normalizeLineItems`, `assertTotalMatches`): quantities are positive integers, discounts are finite numbers 0–100, and the server-computed total must be finite. NaN once silently passed the total check.
+- **Discount approval:** an effective discount over `DISCOUNT_APPROVAL_THRESHOLD` (default 20%) needs an admin's approval PIN (`utils/approval.js`). The server answers `403 { code: 'APPROVAL_REQUIRED' }`, and the client's axios interceptor shows `<ApprovalPrompt />` and retries the request. `cashierRole` and `approvedBy` are trusted server context; never take them from a request body.
+- **M-Pesa callback** (`/api/payments/mpesa/callback/:token`):
+  - The secret path token must match. The pending row is claimed atomically, and the paid amount and receipt (unique) are checked.
+  - Outside mock mode, an STK Query must also confirm the payment.
+  - A payment taken without a resulting sale goes to `refund_required` and an automatic reversal is attempted. Admins see these on the M-Pesa Refunds page.
+- **Idempotency:** the POS sends a `clientSaleId` with every checkout, so a retried or offline-replayed sale returns the original instead of duplicating it.
+- **Integrations** (`services/mpesa.js`, `services/etims.js`, `services/sms.js`) each have a `mock` mode. The eTIMS and SMS adapters read their mode on every call. `config/validateEnv.js` refuses unsafe production config at startup.
+- **Route gating:** catalog, stock, purchase-order, supplier, return and void writes are admin-only. `tests/securityRegressions.test.js` checks each guard.
+
+## Known gaps
+
+- Returns and voids are not yet sent to KRA eTIMS as credit notes. The live eTIMS payload mapping must be verified against KRA's current spec (see `docs/GO-LIVE.md`).
+- Scheduled jobs are in-process `setInterval`s. The weekly summary is deduplicated in the database (`JobState`), but the eTIMS and low-stock sweeps assume a single server instance.
+- **Two admin-gating middlewares** (`adminOnly` and `checkRole('admin')`) do the same check. Match whichever the surrounding file uses.
+- **Unused frontend dependencies:** `dompurify` and `lodash`.

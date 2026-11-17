@@ -3,4 +3,5 @@ client/.env
 server/.env
 client/dist/
 server/data/
+server/backups/
 server/tests/.mongo-config.json

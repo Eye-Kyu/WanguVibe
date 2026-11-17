@@ -21,6 +21,9 @@ import ForecastPage from './pages/admin/ForecastPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import WebhooksPage from './pages/admin/WebhooksPage';
 import ApiKeysPage from './pages/admin/ApiKeysPage';
+import RefundsPage from './pages/admin/RefundsPage';
+import ExceptionsPage from './pages/admin/ExceptionsPage';
+import ApprovalPrompt from './components/ApprovalPrompt';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 //import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -34,6 +37,7 @@ function App() {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
+      <ApprovalPrompt />
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/balance" element={<BalanceCheckPage />} />
@@ -57,6 +61,8 @@ function App() {
           <Route path="webhooks" element={<WebhooksPage />} />
           <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="etims" element={<EtimsRetryPage />} />
+          <Route path="refunds" element={<RefundsPage />} />
+          <Route path="exceptions" element={<ExceptionsPage />} />
           <Route path="users" element={<UsersPage />} />
         </Route>
       </Routes>

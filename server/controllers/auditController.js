@@ -4,11 +4,15 @@ const { reportError } = require('../utils/reportError');
 exports.logAction = async (req, res) => {
   try {
     const { action, details } = req.body;
-    if (!action) return res.status(400).json({ error: 'action is required' });
+    if (typeof action !== 'string' || !/^[a-z0-9_.-]{1,64}$/i.test(action)) {
+      return res.status(400).json({ error: 'action must be 1-64 characters of letters, digits, _ . or -' });
+    }
 
     // userId comes from the authenticated request, never the client body —
     // a caller shouldn't be able to log an action under someone else's name.
-    const audit = new Audit({ action, details, userId: req.user.id });
+    // Client-reported actions are namespaced so they can never be mistaken
+    // for (or impersonate) a server-recorded event like `user_deleted`.
+    const audit = new Audit({ action: `client:${action}`, details, userId: req.user.id });
     await audit.save();
     res.status(201).json({ message: 'Action logged' });
   } catch (err) {

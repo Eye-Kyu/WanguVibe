@@ -38,11 +38,12 @@ function PaymentBadge({ method }) {
     );
 }
 
-const STATUS_LABELS = { completed: "Completed", partially_returned: "Partially Returned", returned: "Returned" };
+const STATUS_LABELS = { completed: "Completed", partially_returned: "Partially Returned", returned: "Returned", voided: "Voided" };
 const STATUS_STYLES = {
     completed: "bg-gray-100 text-gray-600",
     partially_returned: "bg-amber-100 text-amber-700",
     returned: "bg-red-100 text-red-700",
+    voided: "bg-gray-800 text-white",
 };
 
 function StatusBadge({ status }) {
@@ -71,13 +72,32 @@ function SaleModal({ sale, onClose, onReturned }) {
     const [returnQtys, setReturnQtys] = useState({});
     const [destination, setDestination] = useState("cash");
     const [submitting, setSubmitting] = useState(false);
+    const [voiding, setVoiding] = useState(false);
+    const [voidReason, setVoidReason] = useState("");
 
-    useEffect(() => { setReturnQtys({}); setDestination("cash"); }, [sale?._id]);
+    useEffect(() => { setReturnQtys({}); setDestination("cash"); setVoiding(false); setVoidReason(""); }, [sale?._id]);
 
     if (!sale) return null;
 
     const hasDiscounts = sale.items.some((i) => (i.discount ?? 0) > 0);
-    const isFullyReturned = sale.status === "returned";
+    const isFullyReturned = sale.status === "returned" || sale.status === "voided";
+    const canVoid = sale.status === "completed";
+
+    const handleVoid = async () => {
+        if (!voidReason.trim()) return;
+        setSubmitting(true);
+        try {
+            const res = await api.post(`/sales/${sale._id}/void`, { reason: voidReason.trim() });
+            toast.success("Sale voided — stock and payments reversed");
+            setVoiding(false);
+            setVoidReason("");
+            onReturned(res.data);
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Failed to void sale");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const remainingFor = (item) => item.quantity - (item.returnedQuantity || 0);
 
@@ -272,6 +292,25 @@ function SaleModal({ sale, onClose, onReturned }) {
                     </div>
                 )}
 
+                {sale.status === "voided" && sale.void?.reason && (
+                    <p className="px-6 pb-3 text-sm text-gray-600">Voided: {sale.void.reason}</p>
+                )}
+
+                {voiding && (
+                    <div className="px-6 pb-3 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1.5" htmlFor="void-reason">
+                            Why is this sale being voided? Stock is restored and every payment is reversed.
+                        </label>
+                        <input
+                            id="void-reason"
+                            value={voidReason}
+                            onChange={(e) => setVoidReason(e.target.value)}
+                            placeholder="e.g. Rung up twice by mistake"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+                        />
+                    </div>
+                )}
+
                 {/* Footer */}
                 <div className="px-6 pb-5 shrink-0 flex gap-3">
                     <button
@@ -288,6 +327,24 @@ function SaleModal({ sale, onClose, onReturned }) {
                         >
                             {submitting ? "Processing…" : "Process Return"}
                         </button>
+                    )}
+                    {canVoid && itemsToReturn.length === 0 && (
+                        voiding ? (
+                            <button
+                                onClick={handleVoid}
+                                disabled={submitting || !voidReason.trim()}
+                                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {submitting ? "Voiding…" : "Confirm Void"}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setVoiding(true)}
+                                className="flex-1 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition"
+                            >
+                                Void Sale
+                            </button>
+                        )
                     )}
                 </div>
             </div>

@@ -1,12 +1,14 @@
 const Supplier = require('../models/Supplier');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const { reportError } = require('../utils/reportError');
+const { escapeRegex } = require('../utils/escapeRegex');
 
 exports.getAllSuppliers = async (req, res) => {
   try {
     const { search } = req.query;
+    const safeSearch = search ? escapeRegex(search) : '';
     const query = search
-      ? { $or: [{ name: { $regex: search, $options: 'i' } }, { contactName: { $regex: search, $options: 'i' } }, { phone: { $regex: search, $options: 'i' } }] }
+      ? { $or: [{ name: { $regex: safeSearch, $options: 'i' } }, { contactName: { $regex: safeSearch, $options: 'i' } }, { phone: { $regex: safeSearch, $options: 'i' } }] }
       : {};
     const suppliers = await Supplier.find(query).sort({ name: 1 });
     res.json(suppliers);

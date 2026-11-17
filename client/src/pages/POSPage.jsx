@@ -11,9 +11,57 @@ import { useNavigate } from 'react-router-dom';
 import businessSettings from '../config/businessSettings';
 import { setPosLocale } from '../i18n';
 import { IconPhoto, IconGift, IconX, IconCheck, IconCash, IconPhone, IconCard, IconTag, IconPrinter, IconCart, IconCamera, IconSearch, IconSun, IconMoon } from '../components/icons';
-import { queueSale, flushQueue, getPendingSales, getFailedSales, cacheStyles, getCachedStyles } from '../offlineQueue';
+import { queueSale, flushQueue, getPendingSales, getFailedSales, retryFailedSale, removeSale, cacheStyles, getCachedStyles } from '../offlineQueue';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+// Idempotency key for one checkout (see the server's Sale.clientSaleId).
+const newClientSaleId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`);
+
+// Offline sales the server refused when the till reconnected. Each is a
+// customer who has already paid, so the cashier must resolve it: retry once
+// the cause is fixed, or discard after settling it with the customer.
+function FailedSalesModal({ sales, onRetry, onDiscard, onClose }) {
+    const [confirmDiscard, setConfirmDiscard] = useState(null);
+    return (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="failed-sales-title" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 rounded-sm shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <h2 id="failed-sales-title" className="text-lg font-bold text-gray-900 dark:text-gray-100">Sales that couldn&apos;t sync</h2>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">These were rung up offline and the customer has paid, but the server refused them. The owner has been notified.</p>
+                </div>
+                <ul className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                    {sales.map((s) => (
+                        <li key={s.id} className="px-5 py-3 space-y-1">
+                            <div className="flex justify-between text-sm">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">KES {Number(s.payload.totalAmount || 0).toFixed(2)} · {s.payload.paymentMethod}</span>
+                                <span className="text-xs text-gray-500">{new Date(s.queuedAt).toLocaleString()}</span>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{s.payload.items?.length || 0} item(s)</p>
+                            <p className="text-xs text-red-600" role="status">{s.error}</p>
+                            <div className="flex justify-end gap-2 pt-1">
+                                {confirmDiscard === s.id ? (
+                                    <>
+                                        <span className="text-xs text-gray-600 dark:text-gray-400 self-center">Refunded or re-rung the customer?</span>
+                                        <button onClick={() => setConfirmDiscard(null)} className="px-3 py-1 text-xs rounded-xl border border-gray-200 dark:border-gray-700">Keep</button>
+                                        <button onClick={() => { setConfirmDiscard(null); onDiscard(s.id); }} className="px-3 py-1 text-xs rounded-xl bg-red-600 text-white">Discard</button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button onClick={() => setConfirmDiscard(s.id)} className="px-3 py-1 text-xs rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">Discard</button>
+                                        <button onClick={() => onRetry(s.id)} className="px-3 py-1 text-xs rounded-xl bg-indigo-600 text-white">Retry</button>
+                                    </>
+                                )}
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                    <button onClick={onClose} className="px-4 py-2 text-sm rounded-xl bg-gray-900 text-white">Close</button>
+                </div>
+            </div>
+        </div>
+    );
+}
 // Total stock across a style's variants, and its displayed price (a single
 // base price, or a "from X" when any variant overrides it).
 const styleStock = (style) => (style.variants || []).reduce((s, v) => s + (v.active === false ? 0 : v.stock), 0);
@@ -966,6 +1014,45 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
 LayawayModal.displayName = 'LayawayModal';
 
 // ─── Receipt Modal ────────────────────────────────────────────────────────────
+// Texts the receipt (with the KRA invoice number) to the customer — only
+// when they ask for it at the till.
+function SmsReceiptForm({ sale }) {
+    const [phone, setPhone] = useState(sale.customer?.phone || '');
+    const [sending, setSending] = useState(false);
+    const [sentTo, setSentTo] = useState(null);
+
+    const send = async (e) => {
+        e.preventDefault();
+        setSending(true);
+        try {
+            const res = await api.post(`/sales/${sale._id}/send-receipt`, { phone: phone.trim() });
+            setSentTo(res.data.to);
+            toast.success(`Receipt sent to ${res.data.to}`);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Could not send the receipt');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    if (sentTo) return <p className="px-5 pb-3 text-xs text-emerald-600 text-center" role="status">Receipt texted to {sentTo}</p>;
+    return (
+        <form onSubmit={send} className="flex gap-2 px-5 pb-3">
+            <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                placeholder="Customer phone for SMS receipt"
+                aria-label="Customer phone for SMS receipt"
+                className="flex-1 min-w-0 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded-xl px-3 py-2 text-sm"
+            />
+            <button type="submit" disabled={sending || phone.trim().length < 9} className="px-3 py-2 rounded-xl text-sm font-semibold text-indigo-600 border border-indigo-200 dark:border-indigo-800 disabled:opacity-50 flex items-center gap-1.5">
+                <IconPhone className="w-4 h-4" /> {sending ? 'Sending…' : 'Text receipt'}
+            </button>
+        </form>
+    );
+}
+
 const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
     const [qrUrl, setQrUrl] = useState('');
     const [etimsQrUrl, setEtimsQrUrl] = useState('');
@@ -1097,6 +1184,8 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                     <p className="text-center text-[10px] text-gray-500 dark:text-gray-400 mt-3">{businessSettings.receiptFooter}</p>
                 </div>
 
+                <SmsReceiptForm sale={sale} />
+
                 <div className="flex gap-3 px-5 pb-5">
                     <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Close</button>
                     <button onClick={onPrint} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5">
@@ -1223,13 +1312,30 @@ export default function POSPage() {
 
     // ── Offline sales queue: sync status + auto-flush on reconnect ──
     const [offlineCounts, setOfflineCounts] = useState({ pending: 0, failed: 0 });
+    const [failedSales, setFailedSales] = useState([]);
+    const [showFailedSales, setShowFailedSales] = useState(false);
     const refreshOfflineCounts = useCallback(async () => {
         const [pending, failed] = await Promise.all([getPendingSales(), getFailedSales()]);
         setOfflineCounts({ pending: pending.length, failed: failed.length });
+        setFailedSales(failed);
     }, []);
 
     const syncOfflineQueue = useCallback(async () => {
-        const result = await flushQueue((payload) => api.post('/sales', payload));
+        const result = await flushQueue((payload) => api.post('/sales', payload), {
+            // Leaves a trail for the owner: the customer paid, but the sale
+            // couldn't be recorded (e.g. sold out on another till meanwhile).
+            onRejected: (entry, message) => api.post('/audit', {
+                action: 'offline_sale_rejected',
+                details: {
+                    clientSaleId: entry.payload.clientSaleId,
+                    queuedAt: entry.queuedAt,
+                    totalAmount: entry.payload.totalAmount,
+                    paymentMethod: entry.payload.paymentMethod,
+                    itemCount: entry.payload.items?.length,
+                    error: message,
+                },
+            }),
+        });
         if (result.synced > 0) toast.success(`${result.synced} queued sale${result.synced !== 1 ? 's' : ''} synced`);
         if (result.failed > 0) toast.error(`${result.failed} queued sale${result.failed !== 1 ? 's' : ''} could not sync — needs attention`);
         await refreshOfflineCounts();
@@ -1491,6 +1597,10 @@ export default function POSPage() {
 
         setProcessing(true);
         const payload = {
+            // Generated once per checkout, before the first attempt: a retry
+            // or a later offline-queue replay reuses it, so the server can
+            // tell "same sale again" from "a new sale".
+            clientSaleId: newClientSaleId(),
             items: cart.map(({ variantId, quantity, discount }) => ({ variant: variantId, quantity, discount })),
             totalAmount: grandTotal,
             cartDiscount,
@@ -1651,8 +1761,8 @@ export default function POSPage() {
 
                     {(offlineCounts.pending > 0 || offlineCounts.failed > 0) && (
                         <button
-                            onClick={syncOfflineQueue}
-                            title="Click to retry syncing now"
+                            onClick={offlineCounts.failed > 0 ? () => setShowFailedSales(true) : syncOfflineQueue}
+                            title={offlineCounts.failed > 0 ? 'Review sales that could not sync' : 'Click to retry syncing now'}
                             className={`flex items-center gap-1.5 text-xs font-semibold rounded-xl px-2.5 py-1.5 transition-colors flex-shrink-0 border ${
                                 offlineCounts.failed > 0
                                     ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50'
@@ -2026,6 +2136,20 @@ export default function POSPage() {
                         setGiftCardsToSell(prev => [...prev, { tempId: `${Date.now()}-${Math.random()}`, amount }]);
                         setShowSellGiftCard(false);
                         toast.success(`Gift card (KES ${amount.toFixed(2)}) added to sale`);
+                    }}
+                />
+            )}
+
+            {showFailedSales && failedSales.length > 0 && (
+                <FailedSalesModal
+                    sales={failedSales}
+                    onClose={() => setShowFailedSales(false)}
+                    onRetry={async (id) => { await retryFailedSale(id); await syncOfflineQueue(); }}
+                    onDiscard={async (id) => {
+                        const entry = failedSales.find((s) => s.id === id);
+                        await removeSale(id);
+                        api.post('/audit', { action: 'offline_sale_discarded', details: { clientSaleId: entry?.payload.clientSaleId, totalAmount: entry?.payload.totalAmount, error: entry?.error } }).catch(() => {});
+                        await refreshOfflineCounts();
                     }}
                 />
             )}

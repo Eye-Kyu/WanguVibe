@@ -5,6 +5,57 @@ import { AuthContext } from '../../context/AuthContext';
 import ErrorState from '../../components/ErrorState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
+// An admin's own manager-override PIN, typed at the till to approve a
+// cashier's over-limit discount. Needs the current password to change.
+function ApprovalPinPanel() {
+    const [open, setOpen] = useState(false);
+    const [password, setPassword] = useState('');
+    const [pin, setPin] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const save = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            await api.post('/auth/approval-pin', { password, pin });
+            toast.success('Approval PIN saved');
+            setOpen(false);
+            setPassword('');
+            setPin('');
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to save PIN');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (!open) {
+        return (
+            <button onClick={() => setOpen(true)} className="text-sm font-medium px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                My approval PIN
+            </button>
+        );
+    }
+    return (
+        <form onSubmit={save} className="flex flex-wrap items-end gap-2 bg-white border border-gray-100 rounded-sm p-3 shadow-sm">
+            <label className="text-xs text-gray-600">
+                Current password
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
+                    className="block mt-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-44" />
+            </label>
+            <label className="text-xs text-gray-600">
+                New PIN (4–8 digits)
+                <input type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))} autoComplete="off"
+                    className="block mt-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-32 tracking-widest" />
+            </label>
+            <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm text-gray-600">Cancel</button>
+            <button type="submit" disabled={saving || !password || pin.length < 4} className="px-3 py-1.5 text-sm rounded-xl bg-indigo-600 text-white disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save PIN'}
+            </button>
+        </form>
+    );
+}
+
 function RoleBadge({ role }) {
     if (role === 'admin') return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Admin</span>;
     return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">Cashier</span>;
@@ -20,8 +71,8 @@ function UserModal({ initial, onSave, onClose, submitting, isSelf }) {
     const [showPw, setShowPw] = useState(false);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-    const valid = form.name.trim() && form.username.trim() && (!isEdit ? form.password.length >= 6 : true);
-    const pwHint = isEdit ? 'Leave blank to keep current password (min 6 chars to change)' : 'Minimum 6 characters';
+    const valid = form.name.trim() && form.username.trim() && (!isEdit ? form.password.length >= 8 : (!form.password || form.password.length >= 8));
+    const pwHint = isEdit ? 'Leave blank to keep current password (min 8 chars to change)' : 'Minimum 8 characters';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -149,7 +200,7 @@ export default function UsersPage() {
         try {
             if (modalUser?._id) {
                 const payload = { name: form.name, role: form.role };
-                if (form.password && form.password.length >= 6) payload.password = form.password;
+                if (form.password) payload.password = form.password;
                 const res = await api.put(`/users/${modalUser._id}`, payload);
                 setUsers(u => u.map(x => x._id === modalUser._id ? res.data : x));
                 toast.success('User updated');
@@ -190,12 +241,15 @@ export default function UsersPage() {
                     <h1 className="text-xl font-semibold text-gray-800">Users</h1>
                     <p className="text-sm text-gray-500 mt-0.5">{users.length} team member{users.length !== 1 ? 's' : ''}</p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                <ApprovalPinPanel />
                 <button
                     onClick={() => setModalUser({})}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
                 >
                     <span className="text-lg leading-none">+</span> Add User
                 </button>
+                </div>
             </div>
 
             {/* Filters */}

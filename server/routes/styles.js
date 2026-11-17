@@ -8,13 +8,13 @@ const parser = require('../middleware/cloudinaryParser');
 
 // Styles (each returned with its variants embedded — see styleController)
 router.get('/', protect, styleController.getAllStyles);
-router.post('/', protect, parser.single('image'), styleController.createStyle);
+router.post('/', protect, checkRole('admin'), parser.single('image'), styleController.createStyle);
 router.get('/:id', protect, styleController.getStyleById);
-router.put('/:id', protect, parser.single('image'), styleController.updateStyle);
+router.put('/:id', protect, checkRole('admin'), parser.single('image'), styleController.updateStyle);
 router.delete('/:id', protect, checkRole('admin'), styleController.deleteStyle);
 
 // Variants nested under a style
 router.get('/:styleId/variants', protect, variantController.getVariantsForStyle);
-router.post('/:styleId/variants', protect, variantController.createVariant);
+router.post('/:styleId/variants', protect, checkRole('admin'), variantController.createVariant);
 
 module.exports = router;

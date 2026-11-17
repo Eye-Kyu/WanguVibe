@@ -43,27 +43,30 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: http://localhost:5000/api
 
   smoke-test:
     name: Live API smoke test
     runs-on: ubuntu-latest
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     env:
-      MONGO_URI: mongodb://127.0.0.1:27017/wanguvibe_ci
+      # Single-node replica set: sales, returns, layaways and PO receiving
+      # all use transactions, which a standalone mongod rejects.
+      MONGO_URI: mongodb://127.0.0.1:27017/wanguvibe_ci?replicaSet=rs0&directConnection=true
       PORT: 5000
       CLIENT_URL: http://localhost:5173
       JWT_SECRET: ci-smoke-test-secret
       MPESA_MODE: mock
       ETIMS_MODE: mock
+      # Throwaway credential for the ephemeral CI database only.
+      SMOKE_ADMIN_PASSWORD: ci-only-admin-password
+      # Throwaway VAPID keypair (same one the Jest suite uses) so the smoke
+      # test's push-subscription checks have keys to work with.
+      VAPID_PUBLIC_KEY: BK5dJtOSyxCydjST1XQXOH_qX54TGX30t6HVf9-4mmeVkZ2b3nuAOIhrQ6gYupkM3N9n0i2Cq4pZE_-xi2a2RRY
+      VAPID_PRIVATE_KEY: voj6XsbyFB6PEmUBbS4IxXJjiu78_6ot-guY0WioflI
+      VAPID_SUBJECT: mailto:ci@example.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -71,12 +74,27 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: server/package-lock.json
+      - name: Start MongoDB as a single-node replica set
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:7 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval "db.runCommand({ping:1})" >/dev/null 2>&1 && break
+            sleep 1
+          done
+          docker exec mongo mongosh --quiet --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: '127.0.0.1:27017'}]})"
+          for i in $(seq 1 30); do
+            if docker exec mongo mongosh --quiet --eval "db.hello().isWritablePrimary" | grep -q true; then
+              echo "Replica set primary ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Replica set never became primary"; exit 1
       - name: Install server deps
         working-directory: server
         run: npm ci
       - name: Seed the first admin user
         working-directory: server
-        run: node scripts/seedAdmin.js admin "WanguNiW@ngu" "CI Admin"
+        run: node scripts/seedAdmin.js admin "$SMOKE_ADMIN_PASSWORD" "CI Admin"
       - name: Start server in the background
         working-directory: server
         run: nohup node server.js > server.log 2>&1 &
@@ -91,7 +109,7 @@ jobs:
           echo "Server never came up"; exit 1
       - name: Run the smoke test suite
         working-directory: server
-        run: node scripts/smokeTest.js http://localhost:5000 "WanguNiW@ngu"
+        run: node scripts/smokeTest.js http://localhost:5000
       - name: Dump server log on failure
         if: failure()
         working-directory: server

@@ -40,6 +40,7 @@ const layawaySchema = new mongoose.Schema({
   dueDate: { type: Date, default: null },
   status: { type: String, enum: ['active', 'completed', 'cancelled'], default: 'active' },
   cashier: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   // Set once completeLayaway builds and saves the real Sale record.
   completedSale: { type: mongoose.Schema.Types.ObjectId, ref: 'Sale', default: null },
   cancellation: {

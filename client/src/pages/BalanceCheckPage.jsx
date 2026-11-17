@@ -16,18 +16,17 @@ export default function BalanceCheckPage() {
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    // Store credit is verified by SMS: step 'phone' asks for the number,
+    // step 'code' for the 6-digit code texted to it.
+    const [step, setStep] = useState('phone');
+    const [code, setCode] = useState('');
+    const [notice, setNotice] = useState('');
 
-    const handleCheck = async (e) => {
-        e.preventDefault();
-        if (!input.trim()) return;
+    const run = async (fn) => {
         setLoading(true);
         setError('');
-        setResult(null);
         try {
-            const path = tab === 'store-credit' ? '/public/store-credit' : '/public/gift-card';
-            const param = tab === 'store-credit' ? 'phone' : 'code';
-            const res = await api.get(`${path}?${param}=${encodeURIComponent(input.trim())}`);
-            setResult(res.data);
+            await fn();
         } catch (err) {
             setError(err.response?.data?.error || 'Something went wrong. Please try again.');
         } finally {
@@ -35,11 +34,43 @@ export default function BalanceCheckPage() {
         }
     };
 
+    const handleCheck = (e) => {
+        e.preventDefault();
+        if (!input.trim()) return;
+        setResult(null);
+        if (tab === 'gift-card') {
+            run(async () => {
+                const res = await api.get(`/public/gift-card?code=${encodeURIComponent(input.trim())}`);
+                setResult(res.data);
+            });
+            return;
+        }
+        run(async () => {
+            const res = await api.post('/public/store-credit/request-code', { phone: input.trim() });
+            setNotice(res.data.message);
+            setCode('');
+            setStep('code');
+        });
+    };
+
+    const handleVerify = (e) => {
+        e.preventDefault();
+        run(async () => {
+            const res = await api.post('/public/store-credit/verify', { phone: input.trim(), code });
+            setResult(res.data);
+            setStep('phone');
+            setNotice('');
+        });
+    };
+
     const switchTab = (key) => {
         setTab(key);
         setInput('');
         setResult(null);
         setError('');
+        setStep('phone');
+        setCode('');
+        setNotice('');
     };
 
     return (
@@ -65,12 +96,40 @@ export default function BalanceCheckPage() {
                     ))}
                 </div>
 
+                {tab === 'store-credit' && step === 'code' ? (
+                    <form onSubmit={handleVerify} className="space-y-3">
+                        <p className="text-sm text-gray-600" role="status">{notice}</p>
+                        <label className="block text-sm text-gray-700">
+                            6-digit code
+                            <input
+                                value={code}
+                                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                autoFocus
+                                className="mt-1 w-full border border-gray-200 rounded-xl px-4 py-2.5 text-lg tracking-[0.4em] text-center outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                            />
+                        </label>
+                        <button
+                            type="submit"
+                            disabled={loading || code.length !== 6}
+                            className="w-full bg-indigo-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition"
+                        >
+                            {loading ? 'Checking…' : 'Show my balance'}
+                        </button>
+                        <button type="button" onClick={() => { setStep('phone'); setError(''); }} className="w-full text-sm text-gray-600 py-1">
+                            Use a different number
+                        </button>
+                    </form>
+                ) : (
                 <form onSubmit={handleCheck} className="space-y-3">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={tab === 'store-credit' ? 'Phone number' : 'Gift card code'}
+                        placeholder={tab === 'store-credit' ? 'Phone number (e.g. 0712 345 678)' : 'Gift card code'}
+                        aria-label={tab === 'store-credit' ? 'Phone number' : 'Gift card code'}
+                        inputMode={tab === 'store-credit' ? 'tel' : 'text'}
                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-400 transition"
                     />
                     <button
@@ -78,9 +137,10 @@ export default function BalanceCheckPage() {
                         disabled={loading || !input.trim()}
                         className="w-full bg-indigo-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition"
                     >
-                        {loading ? 'Checking…' : 'Check Balance'}
+                        {loading ? 'Checking…' : tab === 'store-credit' ? 'Text me a code' : 'Check Balance'}
                     </button>
                 </form>
+                )}
 
                 {error && (
                     <p className="mt-4 text-sm text-red-600 text-center">{error}</p>

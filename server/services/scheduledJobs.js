@@ -16,6 +16,7 @@ const { reportError } = require('../utils/reportError');
 const { notifyAdmins } = require('./pushNotifications');
 const logger = require('../utils/logger');
 const Sentry = require('@sentry/node');
+const { maybeSendWeeklySummary } = require('./ownerSummary');
 
 const ETIMS_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 const ETIMS_MAX_ATTEMPTS = 10; // beyond this, stop hammering KRA and surface it for a human instead
@@ -138,7 +139,13 @@ function startScheduledJobs() {
     sweepLowStock().catch((err) => reportError(null, err, 'Low stock sweep crashed'));
   }, LOW_STOCK_SWEEP_INTERVAL_MS);
 
-  logger.info('Scheduled jobs started (eTIMS retry sweep, stale pending-payment sweep, low stock sweep)');
+  // Checked every 15 min; sends at most once per week (Monday morning,
+  // Nairobi time), deduplicated in the database so restarts can't resend.
+  setInterval(() => {
+    maybeSendWeeklySummary().catch((err) => reportError(null, err, 'Weekly owner summary crashed'));
+  }, 15 * 60 * 1000);
+
+  logger.info('Scheduled jobs started (eTIMS retry sweep, stale pending-payment sweep, low stock sweep, weekly owner summary)');
 }
 
 module.exports = { startScheduledJobs, sweepEtimsRetryQueue, sweepStalePendingPayments, sweepLowStock };

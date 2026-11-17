@@ -54,6 +54,18 @@ export async function removeSale(id) {
   await db.delete(SALES_STORE, id);
 }
 
+// Puts a failed entry back in the queue (e.g. after restocking the item it
+// was rejected for). Safe to resend: the payload carries its clientSaleId,
+// so the server returns the original if it had in fact been saved.
+export async function retryFailedSale(id) {
+  const db = await getDb();
+  const entry = await db.get(SALES_STORE, id);
+  if (!entry) return;
+  entry.status = 'pending';
+  entry.error = null;
+  await db.put(SALES_STORE, entry);
+}
+
 export async function markSaleFailed(id, error) {
   const db = await getDb();
   const entry = await db.get(SALES_STORE, id);
@@ -66,7 +78,10 @@ export async function markSaleFailed(id, error) {
 // Walks every pending entry and tries to submit it for real. `postSale` is
 // injected (rather than importing the axios instance directly) so this
 // module has no dependency on the API client's own shape/auth handling.
-export async function flushQueue(postSale) {
+// `onRejected(entry, message)` (optional) is told about each sale the
+// server refused, so it can be reported — a rejected cash sale means money
+// in the drawer with no sale behind it.
+export async function flushQueue(postSale, { onRejected } = {}) {
   const pending = await getPendingSales();
   const result = { synced: 0, failed: 0 };
   for (const entry of pending) {
@@ -80,8 +95,12 @@ export async function flushQueue(postSale) {
       // silently dropping the sale. A network error (still offline) leaves
       // the entry untouched so the next flush attempt retries it.
       if (err.response) {
-        await markSaleFailed(entry.id, err.response.data?.error || 'Rejected by server');
+        const message = err.response.data?.error || 'Rejected by server';
+        await markSaleFailed(entry.id, message);
         result.failed++;
+        if (onRejected) {
+          try { await onRejected(entry, message); } catch { /* reporting is best-effort */ }
+        }
       }
     }
   }
