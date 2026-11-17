@@ -4,10 +4,11 @@ import {
     BarChart, Bar, XAxis, YAxis, ResponsiveContainer,
 } from 'recharts';
 import api from '../../api/axiosInstance';
+import { chartColor, chartSeries } from '../../config/chartColors';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28EF4'];
 
 export default function DashboardCharts() {
+    const COLORS = chartSeries();
     const [topProducts, setTopProducts] = useState([]);
     const [stockLevels, setStockLevels] = useState([]);
 
@@ -61,7 +62,7 @@ export default function DashboardCharts() {
                             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="stock" fill="#82ca9d" />
+                            <Bar dataKey="stock" fill={chartColor('ok')} />
                         </BarChart>
                     </ResponsiveContainer>
                 )}

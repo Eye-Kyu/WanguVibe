@@ -70,7 +70,7 @@ function SecretRevealModal({ secret, onClose }) {
             <div className="bg-white rounded-sm shadow-xl w-full max-w-md p-6 space-y-4">
                 <h2 className="font-semibold text-gray-800">Webhook created</h2>
                 <p className="text-sm text-gray-500">
-                    This signing secret is shown once. Use it to verify the <code className="text-xs bg-gray-100 px-1 rounded">X-Webhook-Signature</code> header on deliveries — it won't be shown again.
+                    This signing secret is shown once. Use it to verify the <code className="text-xs bg-gray-100 px-1 rounded">X-Webhook-Signature</code> header on deliveries. It won’t be shown again.
                 </p>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-mono text-xs break-all">{secret}</div>
                 <div className="flex justify-end gap-3">
@@ -175,7 +175,7 @@ export default function WebhooksPage() {
                 <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">URL</th>
                                 <th className="px-4 py-3 text-left">Events</th>
                                 <th className="px-4 py-3 text-left">Status</th>

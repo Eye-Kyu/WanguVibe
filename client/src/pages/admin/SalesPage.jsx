@@ -88,7 +88,7 @@ function SaleModal({ sale, onClose, onReturned }) {
         setSubmitting(true);
         try {
             const res = await api.post(`/sales/${sale._id}/void`, { reason: voidReason.trim() });
-            toast.success("Sale voided — stock and payments reversed");
+            toast.success("Sale voided: stock and payments reversed");
             setVoiding(false);
             setVoidReason("");
             onReturned(res.data);
@@ -151,7 +151,7 @@ function SaleModal({ sale, onClose, onReturned }) {
                 {/* Meta row */}
                 <div className="px-6 py-4 bg-gray-50 grid grid-cols-3 gap-4 text-sm shrink-0">
                     <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date</p>
+                        <p className="text-xs text-gray-500 mb-1">Date</p>
                         <p className="font-medium text-gray-800">
                             {new Date(sale.createdAt).toLocaleDateString("en-US", {
                                 month: "short", day: "numeric", year: "numeric",
@@ -164,11 +164,11 @@ function SaleModal({ sale, onClose, onReturned }) {
                         </p>
                     </div>
                     <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cashier</p>
+                        <p className="text-xs text-gray-500 mb-1">Cashier</p>
                         <p className="font-medium text-gray-800">{sale.cashier?.name || "—"}</p>
                     </div>
                     <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Payment</p>
+                        <p className="text-xs text-gray-500 mb-1">Payment</p>
                         <PaymentBadge method={sale.paymentMethod} />
                     </div>
                 </div>
@@ -177,7 +177,7 @@ function SaleModal({ sale, onClose, onReturned }) {
                 <div className="px-6 py-4 overflow-y-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                                 <th className="pb-2 text-left">Item</th>
                                 <th className="pb-2 text-right">Qty</th>
                                 <th className="pb-2 text-right">Unit Price</th>
@@ -625,7 +625,7 @@ const SalesPage = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500">
                                 <th className="px-5 py-3">Sale ID</th>
                                 <th className="px-5 py-3">Date & Time</th>
                                 <th className="px-5 py-3">Items Sold</th>
@@ -728,7 +728,7 @@ const SalesPage = () => {
                                 disabled={page === 1}
                                 className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
                             >
-                                «
+                                First
                             </button>
                             <button
                                 onClick={() => setPage((p) => Math.max(p - 1, 1))}
@@ -752,7 +752,7 @@ const SalesPage = () => {
                                 disabled={page === totalPages}
                                 className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition"
                             >
-                                »
+                                Last
                             </button>
                         </div>
                     </div>

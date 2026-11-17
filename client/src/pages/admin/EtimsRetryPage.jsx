@@ -56,10 +56,10 @@ export default function EtimsRetryPage() {
         setRetryingId(saleId);
         try {
             const res = await api.post(`/etims/retry/${saleId}`);
-            toast.success(`Resolved — invoice ${res.data.sale.etimsInvoiceNumber}`);
+            toast.success(`Resolved: invoice ${res.data.sale.etimsInvoiceNumber}`);
             fetchQueue();
         } catch (err) {
-            toast.error(err.response?.data?.error || "Retry failed — still unreachable");
+            toast.error(err.response?.data?.error || "Retry failed: still unreachable");
         } finally {
             setRetryingId(null);
         }
@@ -99,12 +99,12 @@ export default function EtimsRetryPage() {
                     <ErrorState message="Failed to load eTIMS retry queue" onRetry={fetchQueue} />
                 ) : entries.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-12">
-                        {statusFilter === "pending" ? "Nothing waiting on retry — all invoices submitted." : "No entries match this filter."}
+                        {statusFilter === "pending" ? "Nothing waiting on retry. All invoices submitted." : "No entries match this filter."}
                     </p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Sale</th>
                                 <th className="px-4 py-3 text-right">Amount</th>
                                 <th className="px-4 py-3 text-left">Last Attempt</th>

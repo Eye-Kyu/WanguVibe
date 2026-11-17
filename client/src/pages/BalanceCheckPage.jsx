@@ -148,7 +148,7 @@ export default function BalanceCheckPage() {
 
                 {result && tab === 'store-credit' && (
                     <div className="mt-5 text-center bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                        <p className="text-xs text-emerald-700 uppercase tracking-wide">{result.name}</p>
+                        <p className="text-xs text-emerald-700">{result.name}</p>
                         <p className="text-2xl font-bold text-emerald-800 mt-1">
                             {businessSettings.currency} {Number(result.storeCreditBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
@@ -158,7 +158,7 @@ export default function BalanceCheckPage() {
 
                 {result && tab === 'gift-card' && (
                     <div className="mt-5 text-center bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                        <p className="text-xs text-emerald-700 uppercase tracking-wide font-mono">{result.code}</p>
+                        <p className="text-sm text-emerald-700 font-mono">{result.code}</p>
                         <p className="text-2xl font-bold text-emerald-800 mt-1">
                             {businessSettings.currency} {Number(result.currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>

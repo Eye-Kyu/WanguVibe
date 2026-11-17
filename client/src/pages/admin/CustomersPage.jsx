@@ -35,7 +35,7 @@ function StoreCreditLedgerModal({ customer, onClose }) {
                 </div>
 
                 <div className="px-5 py-3 bg-indigo-50 border-b border-indigo-100 shrink-0">
-                    <p className="text-xs text-indigo-500 uppercase tracking-wide font-semibold">Current Balance</p>
+                    <p className="text-xs text-indigo-500 font-semibold">Current Balance</p>
                     <p className="text-xl font-bold text-indigo-700">KES {fmt(data?.balance)}</p>
                 </div>
 
@@ -49,7 +49,7 @@ function StoreCreditLedgerModal({ customer, onClose }) {
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                                <tr className="text-xs text-gray-500 border-b border-gray-100">
                                     <th className="px-5 py-2 text-left">Date</th>
                                     <th className="px-5 py-2 text-left">Reason</th>
                                     <th className="px-5 py-2 text-left">By</th>
@@ -269,14 +269,14 @@ export default function CustomersPage() {
                 <ErrorState message="Failed to load customers" onRetry={fetchCustomers} />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     <p className="text-sm">No customers found</p>
                 </div>
             ) : (
                 <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Customer</th>
                                 <th className="px-4 py-3 text-left">Phone</th>
                                 <th className="px-4 py-3 text-left">Email</th>

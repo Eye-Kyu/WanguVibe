@@ -74,11 +74,11 @@ export default function GiftCardsPage() {
                 ) : error ? (
                     <ErrorState message="Failed to load gift cards" onRetry={fetchCards} />
                 ) : cards.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-12">No gift cards sold yet — sell one from the POS screen.</p>
+                    <p className="text-sm text-gray-500 text-center py-12">No gift cards sold yet. Sell one from the POS screen.</p>
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Code</th>
                                 <th className="px-4 py-3 text-left">Issued</th>
                                 <th className="px-4 py-3 text-right">Initial Balance</th>

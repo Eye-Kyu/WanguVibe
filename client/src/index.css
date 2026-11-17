@@ -1,3 +1,14 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Coral (deal 3/3, seed point-sale-back-office-ef65·c50a94d8·2026-11-17·r0) · redesign: restyle
+ * nav: kept (admin sidebar + topbar, POS header) · signature: kept (the POS cart and receipt) · states: loading, empty, error, full (as each screen already has them)
+ * axes: light/grotesk-sans/warm · posture: restrained · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H- E4 S4 R4 V3 · weakest: V (voice), the app's copy is kept as the owner wrote it; only lines a copy gate named were changed */
+/* Hallmark · waive 19 (x5): a lone "—" marks an empty table cell (Analytics, Audit log, Sales, Shifts), a data convention, not prose; "Name A–Z" is a range, where the en dash is correct
+ * waive 67 (x6): uppercase/tracking on code and PIN entry fields (gift-card codes, approval PIN) so typed codes read as codes
+ * waive 48 (x3): src/App.css is the unused Vite template stylesheet, imported nowhere; safe to delete
+ * waive 74: the markup keeps Tailwind palette names; tailwind.config.js maps every one of them to a Coral token in tokens.css
+ * answered F24: dialogs keep a hairline edge with their cast shadow; the edge is the stock edge, the shadow the cast */
+@import url("./tokens.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,7 +23,7 @@
    own manual dark-mode toggle (see ThemeContext.jsx) on any element that
    isn't Tailwind-styled. */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -20,15 +31,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* tailwind.config.js's borderRadius.lg/md/sm all read this — it was
-     never actually defined anywhere in this codebase's history (checked
-     via git log), meaning every rounded-sm/md/lg usage has silently
-     rendered as a square corner (var() with no fallback resolves to the
-     property's initial value, 0, when the custom property is unset) for
-     as long as this app has existed. Defining it here is what makes
-     "smoothen card edges to rounded-sm" actually produce a visible radius
-     instead of a no-op. */
-  --radius: 0.5rem;
 }
 
 body {
@@ -46,4 +48,25 @@ body {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari, modern Edge */
+}
+
+/* Dark theme: the primary (ink board) would sink into the dark ground, so it
+ * flips to a light cotton card with ink type. The markup names the old
+ * indigo utilities without dark: variants, so the flip lives here, once. */
+.dark :is(.bg-indigo-600, .bg-indigo-700, .bg-indigo-800, .bg-indigo-900, .bg-primary) {
+  background-color: oklch(var(--stone-100));
+  color: oklch(var(--stone-900));
+}
+.dark :is(.hover\:bg-indigo-700, .hover\:bg-indigo-800, .hover\:bg-indigo-500):hover {
+  background-color: oklch(var(--stone-200));
+  color: oklch(var(--stone-900));
+}
+.dark :is(.bg-indigo-600, .bg-indigo-700, .bg-indigo-800, .bg-indigo-900, .bg-primary) :is(.text-white, [class*="text-white/"]) {
+  color: oklch(var(--stone-900) / 0.75);
+}
+.dark :is(.text-indigo-600, .text-indigo-700, .text-indigo-800, .text-indigo-900) {
+  color: oklch(var(--stone-100));
+}
+.dark :is(.border-indigo-600, .border-indigo-700) {
+  border-color: oklch(var(--stone-300));
 }

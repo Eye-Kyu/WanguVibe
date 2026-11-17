@@ -40,7 +40,7 @@ function CustomerValueSection() {
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                    <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                         <th className="px-5 pb-2 pt-3 text-left">Customer</th>
                         <th className="px-5 pb-2 pt-3 text-right">Orders</th>
                         <th className="px-5 pb-2 pt-3 text-right">Lifetime Spend</th>
@@ -110,7 +110,7 @@ function StaffLeaderboardSection() {
                 <div className="overflow-x-auto mt-3">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                                 <th className="px-5 pb-2 pt-3 text-left">Cashier</th>
                                 <th className="px-5 pb-2 pt-3 text-right">Transactions</th>
                                 <th className="px-5 pb-2 pt-3 text-right">Revenue</th>
@@ -163,7 +163,7 @@ function CohortRetentionSection() {
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                    <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                         <th className="px-5 pb-2 pt-3 text-left">Cohort</th>
                         <th className="px-5 pb-2 pt-3 text-right">Size</th>
                         {offsets.map((o) => (

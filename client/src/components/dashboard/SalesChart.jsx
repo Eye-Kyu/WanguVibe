@@ -4,6 +4,7 @@ import {
     Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { ThemeContext } from '../../context/ThemeContext';
+import { chartColor } from '../../config/chartColors';
 
 const RANGE_TITLE = { day: "Today's Sales", week: 'Weekly Sales', month: 'Monthly Sales' };
 
@@ -26,8 +27,9 @@ export default function SalesChart({ data = [], range = 'day' }) {
     // through a Tailwind dark: variant.
     const { theme } = useContext(ThemeContext);
     const isDark = theme === 'dark';
-    const gridStroke = isDark ? '#334155' : '#f1f5f9';
-    const tickFill = isDark ? '#64748b' : '#94a3b8';
+    const gridStroke = chartColor('grid', isDark);
+    const tickFill = chartColor('tick', isDark);
+    const line = chartColor('1', isDark);
 
     return (
         <div>
@@ -43,8 +45,8 @@ export default function SalesChart({ data = [], range = 'day' }) {
                     <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%"  stopColor="#4f46e5" stopOpacity={0.15} />
-                                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                <stop offset="5%"  stopColor={line} stopOpacity={0.12} />
+                                <stop offset="95%" stopColor={line} stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
@@ -65,11 +67,11 @@ export default function SalesChart({ data = [], range = 'day' }) {
                         <Area
                             type="monotone"
                             dataKey="total"
-                            stroke="#4f46e5"
-                            strokeWidth={2.5}
+                            stroke={line}
+                            strokeWidth={2}
                             fill="url(#salesGradient)"
-                            dot={{ r: 3, fill: '#4f46e5', strokeWidth: 0 }}
-                            activeDot={{ r: 5, fill: '#4f46e5' }}
+                            dot={{ r: 3, fill: line, strokeWidth: 0 }}
+                            activeDot={{ r: 5, fill: line }}
                         />
                     </AreaChart>
                 </ResponsiveContainer>

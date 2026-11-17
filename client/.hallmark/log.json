@@ -1,0 +1,18 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "restyle",
+  "scope": "app",
+  "theme": "coral",
+  "shape": "app screen",
+  "signature": "kept (POS cart and receipt)",
+  "waived": [
+   "19",
+   "48",
+   "67",
+   "74"
+  ],
+  "prompt": "point of sale and back office for a fashion boutique; soft stone minimal",
+  "date": "2026-11-17"
+ }
+]

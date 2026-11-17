@@ -52,7 +52,7 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
         try {
             const res = await api.post(`/layaways/${layaway._id}/complete`);
             onUpdated(res.data.layaway);
-            toast.success('Layaway completed — sale created');
+            toast.success('Layaway completed: sale created');
         } catch (err) {
             toast.error(err.response?.data?.error || 'Failed to complete layaway');
         } finally {
@@ -88,17 +88,17 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
                 <div className="overflow-y-auto flex-1">
                     <div className="px-5 py-3 bg-indigo-50 border-b border-indigo-100 grid grid-cols-2 gap-3">
                         <div>
-                            <p className="text-xs text-indigo-500 uppercase tracking-wide font-semibold">Total</p>
+                            <p className="text-xs text-indigo-500 font-semibold">Total</p>
                             <p className="text-lg font-bold text-indigo-700">KES {fmt(layaway.totalAmount)}</p>
                         </div>
                         <div>
-                            <p className="text-xs text-indigo-500 uppercase tracking-wide font-semibold">Balance Remaining</p>
+                            <p className="text-xs text-indigo-500 font-semibold">Balance Remaining</p>
                             <p className="text-lg font-bold text-indigo-700">KES {fmt(layaway.balanceRemaining)}</p>
                         </div>
                     </div>
 
                     <div className="px-5 py-3 border-b border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1.5">Items</p>
+                        <p className="text-xs text-gray-500 font-semibold mb-1.5">Items</p>
                         {layaway.items?.map((item, i) => (
                             <div key={i} className="flex justify-between text-sm py-1">
                                 <span className="text-gray-600">{item.styleName} <span className="text-gray-500">({item.size}/{item.color})</span> × {item.quantity}</span>
@@ -108,7 +108,7 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
                     </div>
 
                     <div className="px-5 py-3 border-b border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1.5">Payment History</p>
+                        <p className="text-xs text-gray-500 font-semibold mb-1.5">Payment History</p>
                         <table className="w-full text-sm">
                             <tbody className="divide-y divide-gray-50">
                                 {layaway.payments?.map((p, i) => (
@@ -125,7 +125,7 @@ function LayawayDetailModal({ layaway, onClose, onUpdated }) {
 
                     {isActive && (
                         <div className="px-5 py-3 border-b border-gray-100 space-y-2">
-                            <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Record Payment</p>
+                            <p className="text-xs text-gray-500 font-semibold">Record Payment</p>
                             <div className="flex gap-2">
                                 <input
                                     type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)}
@@ -260,7 +260,7 @@ export default function LayawaysPage() {
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Customer</th>
                                 <th className="px-4 py-3 text-right">Total</th>
                                 <th className="px-4 py-3 text-right">Balance</th>

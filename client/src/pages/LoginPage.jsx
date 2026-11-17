@@ -35,26 +35,23 @@ const LoginPage = () => {
             }}
         >
             {/* Overlay */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-black/55" />
 
             {/* Center Wrapper */}
             <div className="relative z-10 flex items-center justify-center w-full h-full px-4">
 
                 {/* Card */}
-                <div className="w-full rounded-sm max-w-md
-                    bg-purple-950/20 backdrop-blur-2xl
-                    border border-white/20 shadow-2xl
+                <div className="w-full rounded-2xl max-w-md
+                    bg-white text-gray-900 shadow-2xl
                     p-6 sm:p-8 md:p-10
                     animate-fadeIn">
 
                     {/* Title */}
                     <div className="text-center mb-6">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-widest
-                            bg-gradient-to-r from-purple-300 via-purple-500 to-purple-600
-                            bg-clip-text text-transparent">
+                        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900 mx-auto">
                             {businessSettings.name}
                         </h1>
-                        <p className="text-gray-200 text-xs sm:text-sm mt-2">
+                        <p className="text-gray-500 text-sm mt-1">
                             Welcome back
                         </p>
                     </div>
@@ -63,13 +60,16 @@ const LoginPage = () => {
 
                         {/* Username */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-gray-200 text-xs sm:text-sm">
+                            <label htmlFor="login-username" className="text-gray-700 text-sm font-medium">
                                 Username
                             </label>
                             <input
-                                className="w-full bg-white/20 text-white placeholder-gray-300
-                                rounded-full px-4 sm:px-5 py-2.5
-                                outline-none focus:ring-2 focus:ring-yellow-400 transition"
+                                id="login-username"
+                                name="username"
+                                autoComplete="username"
+                                className="w-full h-12 bg-white text-gray-900 placeholder-gray-400
+                                border border-gray-300 rounded-md px-4
+                                outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-indigo-300 transition-colors"
                                 value={form.username}
                                 onChange={(e) =>
                                     setForm({ ...form, username: e.target.value })
@@ -80,16 +80,19 @@ const LoginPage = () => {
 
                         {/* Password */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-gray-200 text-xs sm:text-sm">
+                            <label htmlFor="login-password" className="text-gray-700 text-sm font-medium">
                                 Password
                             </label>
 
                             <div className="relative">
                                 <input
+                                    id="login-password"
+                                    name="password"
+                                    autoComplete="current-password"
                                     type={showPassword ? "text" : "password"}
-                                    className="w-full bg-white/20 text-white placeholder-gray-300
-                                    rounded-full px-4 sm:px-5 py-2.5 pr-14
-                                    outline-none focus:ring-2 focus:ring-yellow-400 transition"
+                                    className="w-full h-12 bg-white text-gray-900 placeholder-gray-400
+                                    border border-gray-300 rounded-md px-4 pr-16
+                                    outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-indigo-300 transition-colors"
                                     value={form.password}
                                     onChange={(e) =>
                                         setForm({ ...form, password: e.target.value })
@@ -100,7 +103,7 @@ const LoginPage = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-4 flex items-center text-xs sm:text-sm text-gray-300 hover:text-yellow-400 transition"
+                                    className="absolute inset-y-0 right-3 my-auto h-8 px-2 rounded-md flex items-center text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                                 >
                                     {showPassword ? "Hide" : "Show"}
                                 </button>
@@ -110,20 +113,19 @@ const LoginPage = () => {
                         {/* Button */}
                         <button
                             onClick={handleLogin}
-                            className="w-full bg-gradient-to-r
-                            from-purple-500 to-purple-600
-                            hover:from-yellow-600 hover:to-yellow-700
-                            active:scale-95
-                            text-white text-sm sm:text-base font-semibold
-                            py-2.5 rounded-full
-                            transition duration-300 shadow-lg"
+                            type="button"
+                            className="w-full h-12 bg-indigo-600 hover:bg-indigo-700
+                            active:translate-y-px
+                            text-white text-base font-medium
+                            rounded-lg shadow-md hover:shadow-lg
+                            transition-[background-color,box-shadow,transform] duration-200"
                         >
                             Login
                         </button>
 
                         <Link
                             to="/balance"
-                            className="block text-center text-xs text-gray-300 hover:text-yellow-400 transition"
+                            className="block text-center text-sm text-gray-600 underline underline-offset-4 decoration-gray-300 hover:text-gray-900 hover:decoration-red-500 transition-colors"
                         >
                             Check your store credit or gift card balance
                         </Link>

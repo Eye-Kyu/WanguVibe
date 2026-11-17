@@ -1,15 +1,16 @@
 import { useContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { ThemeContext } from '../../context/ThemeContext';
+import { chartColor } from '../../config/chartColors';
 
 // Thresholds tuned for per-variant (size/color) stock, which runs much
 // smaller than a mini-mart's flat per-product counts — holding 30 units of
 // one dress in one size/color would be unusual for a boutique.
 const stockColor = (stock) => {
-    if (stock === 0)   return '#ef4444'; // red — out of stock
-    if (stock < 5)     return '#f59e0b'; // amber — critical
-    if (stock < 15)    return '#0ea5e9'; // blue — low
-    return '#10b981';                    // green — healthy
+    if (stock === 0)   return chartColor('danger'); // out of stock
+    if (stock < 5)     return chartColor('warn');   // critical
+    if (stock < 15)    return chartColor('low');    // low
+    return chartColor('ok');                        // healthy
 };
 
 function CustomTooltip({ active, payload, label }) {
@@ -30,8 +31,8 @@ export default function BarChartStockLevels({ data = [] }) {
     // SVG props, not className, so it needs the theme read directly here.
     const { theme } = useContext(ThemeContext);
     const isDark = theme === 'dark';
-    const tickFill = isDark ? '#64748b' : '#94a3b8';
-    const cursorFill = isDark ? '#1e293b' : '#f8fafc';
+    const tickFill = chartColor('tick', isDark);
+    const cursorFill = chartColor('cursor', isDark);
 
     return (
         <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm p-5">
@@ -69,7 +70,7 @@ export default function BarChartStockLevels({ data = [] }) {
                             tickLine={false}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: cursorFill }} />
-                        <ReferenceLine y={5} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1.5} />
+                        <ReferenceLine y={5} stroke={chartColor('warn')} strokeDasharray="4 3" strokeWidth={1.5} />
                         <Bar dataKey="stock" radius={[4, 4, 0, 0]} maxBarSize={48}>
                             {data.map((entry, i) => (
                                 <Cell key={i} fill={stockColor(entry.stock)} />

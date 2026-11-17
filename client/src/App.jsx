@@ -29,6 +29,8 @@ import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import './index.css';
+// Coral base rules load after Tailwind's preflight so it can't reset them.
+import './base.css';
 
 
 

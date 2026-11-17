@@ -80,7 +80,7 @@ export default function ForecastPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Reorder Forecast</h1>
                     <p className="text-sm text-gray-500 mt-0.5">
-                        Based on sales velocity over the last {data?.windowDays ?? 30} days — only variants with recent sales are shown
+                        Based on sales velocity over the last {data?.windowDays ?? 30} days. Only variants with recent sales are shown.
                     </p>
                 </div>
                 <button
@@ -129,7 +129,7 @@ export default function ForecastPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                                <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                                     <th className="pl-5 pb-2 pt-3 w-8">
                                         <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all items that need reordering" disabled={orderable.length === 0} />
                                     </th>

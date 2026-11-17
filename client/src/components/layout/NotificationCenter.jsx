@@ -49,7 +49,7 @@ export default function NotificationCenter() {
                 id: `etims_${e._id}`,
                 category: 'etims',
                 title: e.sale ? `Sale KES ${Number(e.sale.totalAmount).toFixed(2)}` : 'Sale no longer exists',
-                subtitle: `${e.attempts} attempt${e.attempts !== 1 ? 's' : ''} · ${e.lastError || 'pending retry'}`,
+                subtitle: `${e.attempts} attempt${e.attempts !== 1 ? 's' : ''}: ${e.lastError || 'pending retry'}`,
                 href: '/admin/etims',
             }));
 
@@ -114,7 +114,7 @@ export default function NotificationCenter() {
                         Notifications{items.length > 0 ? ` (${items.length})` : ''}
                     </div>
                     {items.length === 0 ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">All clear — nothing needs attention</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">All clear. Nothing needs attention.</p>
                     ) : (
                         <ul className="divide-y divide-gray-50 dark:divide-gray-800">
                             {items.map((n) => (
@@ -123,7 +123,7 @@ export default function NotificationCenter() {
                                         onClick={() => goTo(n.href)}
                                         className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                     >
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-500 dark:text-indigo-400">{CATEGORY_LABELS[n.category]}</p>
+                                        <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400">{CATEGORY_LABELS[n.category]}</p>
                                         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{n.title}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{n.subtitle}</p>
                                     </button>
