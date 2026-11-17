@@ -8,4 +8,8 @@ class HttpError extends Error {
   }
 }
 
+// JSON body for an HttpError — includes `code` when the error carries one
+// (e.g. APPROVAL_REQUIRED) so the client can react to it programmatically.
+HttpError.body = (err) => (err.code && typeof err.code === 'string' ? { error: err.message, code: err.code } : { error: err.message });
+
 module.exports = HttpError;

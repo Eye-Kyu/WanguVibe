@@ -3,6 +3,7 @@ const { reportError } = require('../utils/reportError');
 const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { MIN_PASSWORD_LENGTH, isAcceptablePassword } = require('../utils/password');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -12,6 +13,9 @@ router.post('/create-user', protect, adminOnly, async (req, res) => {
 
   if (!name || !username || !password || !role) {
     return res.status(400).json({ message: 'All fields are required' });
+  }
+  if (typeof username !== 'string' || !isAcceptablePassword(password)) {
+    return res.status(400).json({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
   }
 
   try {

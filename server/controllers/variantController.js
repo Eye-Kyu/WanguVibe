@@ -129,8 +129,7 @@ exports.getLowStockVariants = async (req, res) => {
 // momentum are included: a variant sitting at zero stock with zero recent
 // sales is already surfaced by getLowStockVariants and isn't "about to run
 // out" in any actionable sense here.
-exports.getReorderForecast = async (req, res) => {
-  try {
+async function computeReorderForecast() {
     const windowStart = new Date(Date.now() - VELOCITY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
     // Net units actually sold per variant in the window — returns subtract
@@ -176,7 +175,13 @@ exports.getReorderForecast = async (req, res) => {
       .sort((a, b) => a.daysUntilStockout - b.daysUntilStockout)
       .slice(0, 100); // defensive cap, same idea as the margin report's byStyle limit
 
-    res.json({ windowDays: VELOCITY_WINDOW_DAYS, targetCoverageDays: REORDER_TARGET_COVERAGE_DAYS, forecast });
+    return { windowDays: VELOCITY_WINDOW_DAYS, targetCoverageDays: REORDER_TARGET_COVERAGE_DAYS, forecast };
+}
+exports.computeReorderForecast = computeReorderForecast;
+
+exports.getReorderForecast = async (req, res) => {
+  try {
+    res.json(await computeReorderForecast());
   } catch (err) {
     reportError(req, err, 'Error computing reorder forecast');
     res.status(500).json({ error: 'Server error computing reorder forecast' });

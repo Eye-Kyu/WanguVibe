@@ -1,10 +1,17 @@
 // Live smoke test for every API route. Hits the real running server (not a
 // mock), exercises auth, CRUD, role gating, and cleans up everything it
 // creates. Run with the dev server already up:
-//   node scripts/smokeTest.js [baseUrl]
-// Exits non-zero if anything unexpected happened.
+//   node scripts/smokeTest.js [baseUrl] [adminPassword]
+// (or set SMOKE_ADMIN_PASSWORD). Exits non-zero if anything unexpected happened.
 
 const BASE = process.argv[2] || 'http://localhost:5000';
+// Never default to a real-looking password — a credential committed here is
+// a credential anyone with repo access can try against production.
+const ADMIN_PASSWORD = process.argv[3] || process.env.SMOKE_ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+    console.error('Usage: node scripts/smokeTest.js [baseUrl] <adminPassword>  (or set SMOKE_ADMIN_PASSWORD)');
+    process.exit(2);
+}
 const API = `${BASE}/api`;
 
 const results = [];
@@ -46,6 +53,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Set-Cookie header from the response — needed to exercise the httpOnly
 // refresh-token cookie flow, which `hit` (used for every other route) has no
 // reason to know about.
+// Sales are permanent records now (voided, never deleted). Cleanup voids
+// what it can so reports stay neutral; a sale that already has returns
+// can't be voided (400) and is simply left as-is.
+async function voidForCleanup(label, saleId) {
+    return hit(`Cleanup: void ${label}`, 'POST', `/sales/${saleId}/void`, { token: globalThis.__smokeAdminToken, json: { reason: 'smoke test cleanup' }, expect: [200, 400] });
+}
+
 async function hitWithCookie(label, method, path, { json, cookie, expect = [200, 201] } = {}) {
     const headers = {};
     if (cookie) headers.Cookie = cookie;
@@ -99,8 +113,9 @@ async function main() {
     await hit('Login — wrong password', 'POST', '/auth/login', { json: { username: 'admin', password: 'wrong-password' }, expect: [400] });
     await hit('Login — NoSQL-operator payload rejected', 'POST', '/auth/login', { json: { username: { $gt: '' }, password: { $gt: '' } }, expect: [400] });
 
-    const loginRes = await hit('Login — admin', 'POST', '/auth/login', { json: { username: 'admin', password: process.argv[3] || 'WanguNiW@ngu' } });
+    const loginRes = await hit('Login — admin', 'POST', '/auth/login', { json: { username: 'admin', password: ADMIN_PASSWORD } });
     const adminToken = loginRes?.token;
+    globalThis.__smokeAdminToken = adminToken;
     if (!adminToken) {
         console.error('FATAL: could not log in as admin — aborting remaining tests. Pass the admin password as the 2nd script arg if it differs.');
         printSummary();
@@ -110,7 +125,7 @@ async function main() {
     // ── Refresh-token flow (httpOnly cookie, rotate-on-use, revoke-on-reuse) ──
     {
         const login = await hitWithCookie('Login (cookie capture) — admin', 'POST', '/auth/login', {
-            json: { username: 'admin', password: process.argv[3] || 'WanguNiW@ngu' },
+            json: { username: 'admin', password: ADMIN_PASSWORD },
         });
         if (login.cookie) {
             const refreshed = await hitWithCookie('Refresh — valid cookie issues a new access token', 'POST', '/auth/refresh', { cookie: login.cookie });
@@ -209,7 +224,7 @@ async function main() {
             await hit('Role gate — cashier blocked from GET /dashboard/margins', 'GET', '/dashboard/margins', { token: cashierToken, expect: [403] });
         }
 
-        if (marginSale?._id) await hit('Cleanup: delete margin-report sale', 'DELETE', `/sales/${marginSale._id}`, { token: adminToken });
+        if (marginSale?._id) await voidForCleanup('margin-report sale', marginSale._id);
         if (marginStyle?._id) await hit('Cleanup: delete margin-report style', 'DELETE', `/styles/${marginStyle._id}`, { token: adminToken });
     }
 
@@ -244,7 +259,7 @@ async function main() {
             rowOk ? passCount++ : failCount++;
         }
 
-        if (forecastSale?._id) await hit('Cleanup: delete forecast-test sale', 'DELETE', `/sales/${forecastSale._id}`, { token: adminToken });
+        if (forecastSale?._id) await voidForCleanup('forecast-test sale', forecastSale._id);
         if (forecastStyle?._id) await hit('Cleanup: delete forecast-test style', 'DELETE', `/styles/${forecastStyle._id}`, { token: adminToken });
     }
 
@@ -376,7 +391,7 @@ async function main() {
 
         await hit('Close already-closed shift rejected', 'POST', `/shifts/${openShift._id}/close`, { token: adminToken, json: { closingCount: 1500 }, expect: [400] });
 
-        if (shiftSale?._id) await hit('Cleanup: delete shift-test sale', 'DELETE', `/sales/${shiftSale._id}`, { token: adminToken });
+        if (shiftSale?._id) await voidForCleanup('shift-test sale', shiftSale._id);
         if (shiftStyle?._id) await hit('Cleanup: delete shift-test style', 'DELETE', `/styles/${shiftStyle._id}`, { token: adminToken });
     }
 
@@ -389,7 +404,7 @@ async function main() {
     // ── Store credit ────────────────────────────────────────────────────
     const creditCustomer = await hit('Create customer for store-credit test', 'POST', '/customers', {
         token: adminToken,
-        json: { name: 'Store Credit Test Customer', phone: `07${Date.now()}`.slice(0, 12) },
+        json: { name: 'Store Credit Test Customer', phone: `07${String(Date.now()).slice(-8)}` }, // a valid, per-run-unique KE mobile
         expect: [201],
     });
 
@@ -436,12 +451,17 @@ async function main() {
             results.push({ label: 'Store credit balance = 400 after checkout payment', method: '-', path: '-', status: debitOk ? 'ok' : afterDebit?.storeCreditBalance, ok: debitOk, ms: 0 });
             debitOk ? passCount++ : failCount++;
 
-            // Public, unauthenticated self-service balance checker — no token at all
-            const publicCredit = await hit('Public store-credit lookup — no token needed', 'GET', `/public/store-credit?phone=${encodeURIComponent(creditCustomer.phone)}`, {});
-            const publicCreditOk = publicCredit?.storeCreditBalance === 400 && publicCredit?.name === creditCustomer.name && publicCredit?.notes === undefined && publicCredit?.phone === undefined;
-            results.push({ label: 'Public store-credit lookup returns balance 400 and only minimal safe fields', method: '-', path: '-', status: publicCreditOk ? 'ok' : JSON.stringify(publicCredit), ok: publicCreditOk, ms: 0 });
-            publicCreditOk ? passCount++ : failCount++;
-            await hit('Public store-credit lookup — unknown phone 404s', 'GET', `/public/store-credit?phone=0700000000-nonexistent`, { expect: [404] });
+            // Public self-service balance check is SMS-verified now: requesting a
+            // code answers identically for known and unknown numbers, and a
+            // wrong code reveals nothing. (The code itself goes to the phone, so
+            // the happy path is covered by the Jest suite, not this live test.)
+            const reqKnown = await hit('Public store-credit — request code (known number)', 'POST', '/public/store-credit/request-code', { json: { phone: creditCustomer.phone } });
+            const reqUnknown = await hit('Public store-credit — request code (unknown number)', 'POST', '/public/store-credit/request-code', { json: { phone: '0799000111' } });
+            const sameAnswer = JSON.stringify(reqKnown) === JSON.stringify(reqUnknown);
+            results.push({ label: 'Public store-credit code request does not reveal whether a number is a customer', method: '-', path: '-', status: sameAnswer ? 'ok' : 'differs', ok: sameAnswer, ms: 0 });
+            sameAnswer ? passCount++ : failCount++;
+            await hit('Public store-credit — wrong code rejected', 'POST', '/public/store-credit/verify', { json: { phone: creditCustomer.phone, code: '000000' }, expect: [400] });
+            await hit('Public store-credit — old phone-only lookup is gone', 'GET', `/public/store-credit?phone=${encodeURIComponent(creditCustomer.phone)}`, { expect: [404] });
 
             // Attempt to overspend the remaining 400 balance
             await hit('Store credit payment exceeding balance rejected', 'POST', '/sales', {
@@ -457,8 +477,8 @@ async function main() {
     }
 
     // Cleanup store-credit fixtures
-    if (creditSale2?._id) await hit('Cleanup: delete store-credit-payment sale', 'DELETE', `/sales/${creditSale2._id}`, { token: adminToken });
-    if (creditSale1?._id) await hit('Cleanup: delete store-credit-source sale', 'DELETE', `/sales/${creditSale1._id}`, { token: adminToken });
+    if (creditSale2?._id) await voidForCleanup('store-credit-payment sale', creditSale2._id);
+    if (creditSale1?._id) await voidForCleanup('store-credit-source sale', creditSale1._id);
     if (creditStyle?._id) await hit('Cleanup: delete store-credit-test style', 'DELETE', `/styles/${creditStyle._id}`, { token: adminToken });
     if (creditCustomer?._id) await hit('Cleanup: delete store-credit-test customer', 'DELETE', `/customers/${creditCustomer._id}`, { token: adminToken });
 
@@ -560,8 +580,8 @@ async function main() {
     // Cleanup gift-card fixtures (sales only — no delete endpoint for gift
     // cards themselves; a couple of depleted test cards are left behind,
     // same as how audit/inventory logs are append-only by design)
-    if (giftSaleRedeem1?._id) await hit('Cleanup: delete gift-card-redemption sale', 'DELETE', `/sales/${giftSaleRedeem1._id}`, { token: adminToken });
-    if (giftSaleSell?._id) await hit('Cleanup: delete gift-card-sale sale', 'DELETE', `/sales/${giftSaleSell._id}`, { token: adminToken });
+    if (giftSaleRedeem1?._id) await voidForCleanup('gift-card-redemption sale', giftSaleRedeem1._id);
+    if (giftSaleSell?._id) await voidForCleanup('gift-card-sale sale', giftSaleSell._id);
     if (giftStyle?._id) await hit('Cleanup: delete gift-card-test style', 'DELETE', `/styles/${giftStyle._id}`, { token: adminToken });
 
     // ── Richer analytics (customer value / staff performance / cohorts) ──
@@ -605,11 +625,21 @@ async function main() {
 
             if (analyticsCashierToken) {
                 // Sale 2: temp cashier, no customer -> feeds only that cashier's staff-performance row.
-                // 50% discount on the same 1000 base price gives a distinct, easy-to-assert total (500)
-                // without needing a second style/variant just for a different price point.
-                analyticsSale2 = await hit('Create sale 2 for analytics test (temp cashier, no customer)', 'POST', '/sales', {
+                // A cashier can't give 50% on their own — that needs a manager's PIN.
+                const overLimit = await hit('Cashier discount over the limit needs manager approval', 'POST', '/sales', {
                     token: analyticsCashierToken,
                     json: { items: [{ variant: analyticsVariant._id, quantity: 1, discount: 50 }], totalAmount: 500, paymentMethod: 'cash' },
+                    expect: [403],
+                });
+                const approvalCodeOk = overLimit?.code === 'APPROVAL_REQUIRED';
+                results.push({ label: 'Over-limit discount answers APPROVAL_REQUIRED', method: '-', path: '-', status: approvalCodeOk ? 'ok' : JSON.stringify(overLimit), ok: approvalCodeOk, ms: 0 });
+                approvalCodeOk ? passCount++ : failCount++;
+
+                // 20% (the default limit) on the same 1000 base price gives a distinct,
+                // easy-to-assert total (800) without a second style/variant.
+                analyticsSale2 = await hit('Create sale 2 for analytics test (temp cashier, no customer)', 'POST', '/sales', {
+                    token: analyticsCashierToken,
+                    json: { items: [{ variant: analyticsVariant._id, quantity: 1, discount: 20 }], totalAmount: 800, paymentMethod: 'cash' },
                     expect: [201],
                 });
             }
@@ -622,7 +652,7 @@ async function main() {
 
             const staffPerf = await hit('Staff performance report (day)', 'GET', '/dashboard/staff-performance?range=day', { token: adminToken });
             const cashierRow = analyticsCashierUser && staffPerf?.staff?.find(s => s.cashierId === analyticsCashierUser._id);
-            const staffOk = cashierRow?.revenue === 500 && cashierRow?.transactionCount === 1 && cashierRow?.name === 'Analytics Test Cashier';
+            const staffOk = cashierRow?.revenue === 800 && cashierRow?.transactionCount === 1 && cashierRow?.name === 'Analytics Test Cashier';
             results.push({ label: 'Staff performance report shows correct revenue for known cashier', method: '-', path: '-', status: staffOk ? 'ok' : JSON.stringify(cashierRow), ok: staffOk, ms: 0 });
             staffOk ? passCount++ : failCount++;
 
@@ -641,8 +671,8 @@ async function main() {
             }
         }
 
-        if (analyticsSale2?._id) await hit('Cleanup: delete analytics sale 2', 'DELETE', `/sales/${analyticsSale2._id}`, { token: adminToken });
-        if (analyticsSale1?._id) await hit('Cleanup: delete analytics sale 1', 'DELETE', `/sales/${analyticsSale1._id}`, { token: adminToken });
+        if (analyticsSale2?._id) await voidForCleanup('analytics sale 2', analyticsSale2._id);
+        if (analyticsSale1?._id) await voidForCleanup('analytics sale 1', analyticsSale1._id);
         if (analyticsStyle?._id) await hit('Cleanup: delete analytics-test style', 'DELETE', `/styles/${analyticsStyle._id}`, { token: adminToken });
         if (analyticsCustomer?._id) await hit('Cleanup: delete analytics-test customer', 'DELETE', `/customers/${analyticsCustomer._id}`, { token: adminToken });
         if (analyticsCashierUser) await hit('Cleanup: delete analytics-test cashier user', 'DELETE', `/users/${analyticsCashierUser._id}`, { token: adminToken });
@@ -714,7 +744,7 @@ async function main() {
         }
     }
 
-    if (splitSale?._id) await hit('Cleanup: delete split-tender sale', 'DELETE', `/sales/${splitSale._id}`, { token: adminToken });
+    if (splitSale?._id) await voidForCleanup('split-tender sale', splitSale._id);
     if (splitStyle?._id) await hit('Cleanup: delete split-tender-test style', 'DELETE', `/styles/${splitStyle._id}`, { token: adminToken });
 
     // ── Layaway ──────────────────────────────────────────────────────────
@@ -829,7 +859,7 @@ async function main() {
         await hit('GET /layaways — no token rejected', 'GET', '/layaways', { expect: [401] });
     }
 
-    if (completedSaleId) await hit('Cleanup: delete completed-layaway sale', 'DELETE', `/sales/${completedSaleId}`, { token: adminToken });
+    if (completedSaleId) await voidForCleanup('completed-layaway sale', completedSaleId);
     if (layawayCustomer?._id) await hit('Cleanup: delete layaway customer', 'DELETE', `/customers/${layawayCustomer._id}`, { token: adminToken });
     if (layawayStyle?._id) await hit('Cleanup: delete layaway-test style', 'DELETE', `/styles/${layawayStyle._id}`, { token: adminToken });
 
@@ -945,9 +975,12 @@ async function main() {
         expect: [400],
     });
     await hit('M-Pesa initiate — no token rejected', 'POST', '/payments/mpesa/initiate', { json: { phone: '0712345678', items: [], totalAmount: 500 }, expect: [401] });
-    await hit('M-Pesa callback — malformed payload rejected', 'POST', '/payments/mpesa/callback', { json: { nonsense: true }, expect: [400] });
-    await hit('M-Pesa callback — unknown CheckoutRequestID acked anyway', 'POST', '/payments/mpesa/callback', {
+    // The real callback URL carries a secret token only Safaricom (or the
+    // mock self-post) knows — anything else must be refused outright.
+    await hit('M-Pesa callback — missing token rejected', 'POST', '/payments/mpesa/callback', { json: { nonsense: true }, expect: [404] });
+    await hit('M-Pesa callback — wrong token rejected', 'POST', '/payments/mpesa/callback/not-the-token', {
         json: { Body: { stkCallback: { CheckoutRequestID: 'does-not-exist', ResultCode: 0, ResultDesc: 'ok' } } },
+        expect: [404],
     });
 
     const mpesaStyleForm = new FormData();
@@ -1000,7 +1033,7 @@ async function main() {
         }
     }
 
-    if (mpesaSaleId) await hit('Cleanup: delete M-Pesa sale', 'DELETE', `/sales/${mpesaSaleId}`, { token: adminToken });
+    if (mpesaSaleId) await voidForCleanup('M-Pesa sale', mpesaSaleId);
     if (mpesaStyle?._id) await hit('Cleanup: delete M-Pesa-test style', 'DELETE', `/styles/${mpesaStyle._id}`, { token: adminToken });
 
     // ── KRA eTIMS (mock mode) ───────────────────────────────────────────
@@ -1058,8 +1091,8 @@ async function main() {
         }
     }
 
-    if (etimsGoodSale?._id) await hit('Cleanup: delete eTIMS-accepted sale', 'DELETE', `/sales/${etimsGoodSale._id}`, { token: adminToken });
-    if (etimsBadSale?._id) await hit('Cleanup: delete eTIMS-retry sale', 'DELETE', `/sales/${etimsBadSale._id}`, { token: adminToken });
+    if (etimsGoodSale?._id) await voidForCleanup('eTIMS-accepted sale', etimsGoodSale._id);
+    if (etimsBadSale?._id) await voidForCleanup('eTIMS-retry sale', etimsBadSale._id);
     if (etimsStyle?._id) await hit('Cleanup: delete eTIMS-test style', 'DELETE', `/styles/${etimsStyle._id}`, { token: adminToken });
 
     // ── Real-time stock sync (SSE) ──────────────────────────────────────
@@ -1251,7 +1284,7 @@ async function main() {
         }
         await hit('GET /webhooks — no token rejected', 'GET', '/webhooks', { expect: [401] });
 
-        if (webhookSale?._id) await hit('Cleanup: delete webhook-test sale', 'DELETE', `/sales/${webhookSale._id}`, { token: adminToken });
+        if (webhookSale?._id) await voidForCleanup('webhook-test sale', webhookSale._id);
         if (webhookStyle?._id) await hit('Cleanup: delete webhook-test style', 'DELETE', `/styles/${webhookStyle._id}`, { token: adminToken });
         if (webhook?._id) await hit('Cleanup: delete webhook subscription', 'DELETE', `/webhooks/${webhook._id}`, { token: adminToken });
         listener.close();
@@ -1305,18 +1338,38 @@ async function main() {
     await hit('Log audit action', 'POST', '/audit', { token: adminToken, json: { action: 'smoke_test', details: { note: 'automated smoke test run' } }, expect: [201] });
     await hit('Log audit action — missing action rejected', 'POST', '/audit', { token: adminToken, json: { details: {} }, expect: [400] });
 
+    // ── Void (replaces delete) ──────────────────────────────────────────
+    {
+        const voidVariantStyle = style?.variants?.[0] || null;
+        if (voidVariantStyle) {
+            const toVoid = await hit('Create sale to void', 'POST', '/sales', {
+                token: adminToken,
+                json: { items: [{ variant: voidVariantStyle._id, quantity: 1, discount: 0 }], totalAmount: voidVariantStyle.priceOverride ?? style.basePrice, paymentMethod: 'cash' },
+            });
+            if (toVoid?._id) {
+                await hit('Void rejected without a reason', 'POST', `/sales/${toVoid._id}/void`, { token: adminToken, json: {}, expect: [400] });
+                if (cashierToken) await hit('Role gate — cashier blocked from voiding', 'POST', `/sales/${toVoid._id}/void`, { token: cashierToken, json: { reason: 'x' }, expect: [403] });
+                const voided = await hit('Void sale (admin)', 'POST', `/sales/${toVoid._id}/void`, { token: adminToken, json: { reason: 'smoke test void' } });
+                const voidOk = voided?.status === 'voided' && voided?.refundedAmount === voided?.totalAmount;
+                results.push({ label: 'Voided sale keeps its record with status=voided and a full refund', method: '-', path: '-', status: voidOk ? 'ok' : JSON.stringify({ status: voided?.status }), ok: voidOk, ms: 0 });
+                voidOk ? passCount++ : failCount++;
+                await hit('Hard delete of a sale is no longer possible', 'DELETE', `/sales/${toVoid._id}`, { token: adminToken, expect: [404] });
+            }
+        }
+    }
+
     // ── Cleanup ─────────────────────────────────────────────────────────
-    if (sale?._id) await hit('Cleanup: delete sale', 'DELETE', `/sales/${sale._id}`, { token: adminToken });
+    if (sale?._id) await voidForCleanup('sale', sale._id);
     if (style?._id) await hit('Cleanup: delete style (cascades variant)', 'DELETE', `/styles/${style._id}`, { token: adminToken });
 
     // ── Audit — server-side trigger points + GET /api/audit ────────────
     // By this point the run above should have produced: style_created,
     // style_updated, variant_updated, stock_restocked, sale_return_processed,
-    // sale_deleted, style_deleted (plus user_created/updated/deleted from
+    // sale_voided, style_deleted (plus user_created/updated/deleted from
     // earlier). Confirm the log actually captured them.
     const auditPage = await hit('List audit logs (admin)', 'GET', '/audit?limit=100', { token: adminToken });
     const auditActions = new Set((auditPage?.logs || []).map(l => l.action));
-    const expectedActions = ['style_created', 'style_updated', 'variant_updated', 'stock_restocked', 'sale_return_processed', 'sale_deleted', 'style_deleted', 'user_created', 'user_updated', 'user_deleted', 'shift_opened', 'shift_closed', 'store_credit_payment', 'gift_card_sold', 'gift_card_redeemed', 'mpesa_payment_confirmed', 'etims_retry_resolved'];
+    const expectedActions = ['style_created', 'style_updated', 'variant_updated', 'stock_restocked', 'sale_return_processed', 'sale_voided', 'style_deleted', 'user_created', 'user_updated', 'user_deleted', 'shift_opened', 'shift_closed', 'store_credit_payment', 'gift_card_sold', 'gift_card_redeemed', 'mpesa_payment_confirmed', 'etims_retry_resolved'];
     const missing = expectedActions.filter(a => !auditActions.has(a));
     results.push({ label: `Audit log captured all server-side trigger points (${expectedActions.length - missing.length}/${expectedActions.length})`, method: '-', path: '-', status: missing.length ? `missing: ${missing.join(',')}` : 'ok', ok: missing.length === 0, ms: 0 });
     missing.length === 0 ? passCount++ : failCount++;

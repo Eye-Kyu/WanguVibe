@@ -1,5 +1,6 @@
 const Style = require('../models/Style');
 const { reportError } = require('../utils/reportError');
+const { escapeRegex } = require('../utils/escapeRegex');
 const Variant = require('../models/Variant');
 const { logAudit } = require('../utils/auditLogger');
 
@@ -10,14 +11,15 @@ const { logAudit } = require('../utils/auditLogger');
 exports.getAllStyles = async (req, res) => {
   try {
     const { search, category, activeOnly } = req.query;
+    const safeSearch = search ? escapeRegex(search) : '';
     const query = {};
     if (activeOnly !== 'false') query.active = true;
     if (category) query.category = category;
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { styleCode: { $regex: search, $options: 'i' } },
-        { brand: { $regex: search, $options: 'i' } },
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { styleCode: { $regex: safeSearch, $options: 'i' } },
+        { brand: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 

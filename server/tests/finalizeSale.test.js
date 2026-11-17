@@ -414,6 +414,7 @@ describe('finalizeSale — selling gift cards as line items', () => {
       paymentMethod: 'cash',
       giftCardsSold: [{ amount: 2000 }],
       cashier,
+      cashierRole: 'admin', // a 50% discount needs manager approval otherwise
     });
     expect(sale.totalAmount).toBe(2500);
   });

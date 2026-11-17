@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axiosInstance';
 import { toast, ToastContainer } from 'react-toastify';
 import ErrorState from '../../components/ErrorState';
@@ -11,6 +12,35 @@ export default function ForecastPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+    const [selected, setSelected] = useState(() => new Set());
+    const [suppliers, setSuppliers] = useState([]);
+    const [supplier, setSupplier] = useState('');
+    const [creating, setCreating] = useState(false);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        api.get('/suppliers').then((res) => setSuppliers(res.data.filter((s) => s.active !== false))).catch(() => {});
+    }, []);
+
+    const toggle = (id) => setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+    });
+
+    const createPo = async () => {
+        setCreating(true);
+        try {
+            await api.post('/purchase-orders/from-forecast', { supplier, variantIds: [...selected] });
+            toast.success('Purchase order created');
+            setSelected(new Set());
+            navigate('/admin/purchase-orders');
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to create purchase order');
+        } finally {
+            setCreating(false);
+        }
+    };
 
     const fetchForecast = useCallback(() => {
         setLoading(true);
@@ -38,6 +68,9 @@ export default function ForecastPage() {
 
     const forecast = data?.forecast ?? [];
     const urgentCount = forecast.filter((r) => r.daysUntilStockout <= URGENT_DAYS).length;
+    const orderable = forecast.filter((r) => r.suggestedReorderQty > 0);
+    const allSelected = orderable.length > 0 && orderable.every((r) => selected.has(r.variantId));
+    const toggleAll = () => setSelected(allSelected ? new Set() : new Set(orderable.map((r) => r.variantId)));
 
     return (
         <div className="space-y-6">
@@ -66,8 +99,29 @@ export default function ForecastPage() {
             )}
 
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm">
-                <div className="px-5 py-4 border-b border-gray-100">
+                <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                     <h2 className="font-semibold text-gray-800">At-risk variants, most urgent first</h2>
+                    {selected.size > 0 && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm text-gray-600">{selected.size} selected</span>
+                            <select
+                                value={supplier}
+                                onChange={(e) => setSupplier(e.target.value)}
+                                aria-label="Supplier"
+                                className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm"
+                            >
+                                <option value="">Choose supplier…</option>
+                                {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+                            </select>
+                            <button
+                                onClick={createPo}
+                                disabled={!supplier || creating}
+                                className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {creating ? 'Creating…' : 'Create purchase order'}
+                            </button>
+                        </div>
+                    )}
                 </div>
                 {!forecast.length ? (
                     <p className="text-sm text-gray-500 px-5 py-8 text-center">No variants with recent sales momentum to forecast</p>
@@ -76,6 +130,9 @@ export default function ForecastPage() {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                                    <th className="pl-5 pb-2 pt-3 w-8">
+                                        <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all items that need reordering" disabled={orderable.length === 0} />
+                                    </th>
                                     <th className="px-5 pb-2 pt-3 text-left">Variant</th>
                                     <th className="px-5 pb-2 pt-3 text-right">Stock</th>
                                     <th className="px-5 pb-2 pt-3 text-right">Velocity/day</th>
@@ -86,6 +143,15 @@ export default function ForecastPage() {
                             <tbody className="divide-y divide-gray-50">
                                 {forecast.map((row) => (
                                     <tr key={row.variantId}>
+                                        <td className="pl-5 py-2.5">
+                                            <input
+                                                type="checkbox"
+                                                checked={selected.has(row.variantId)}
+                                                onChange={() => toggle(row.variantId)}
+                                                disabled={row.suggestedReorderQty <= 0}
+                                                aria-label={`Reorder ${row.name}`}
+                                            />
+                                        </td>
                                         <td className="px-5 py-2.5 font-medium text-gray-800">{row.name}</td>
                                         <td className="px-5 py-2.5 text-right text-gray-500">{row.stock}</td>
                                         <td className="px-5 py-2.5 text-right text-gray-500">{row.velocityPerDay}</td>

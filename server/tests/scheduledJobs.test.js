@@ -34,6 +34,14 @@ afterEach(() => {
 // round trip finishes, so dedup tests need to let that settle before
 // asserting on it.
 const flushAsync = () => new Promise((resolve) => setTimeout(resolve, 50));
+// notifyAdmins() is fire-and-forget, so a fixed short sleep is flaky under
+// load. Wait (bounded) until at least `n` calls have landed, then flush once
+// more so any unexpected *extra* call would still show up in the assertion.
+async function waitForCalls(spy, n, timeoutMs = 3000) {
+  const deadline = Date.now() + timeoutMs;
+  while (spy.mock.calls.length < n && Date.now() < deadline) await flushAsync();
+  await flushAsync();
+}
 
 async function makeSale(cashier, overrides = {}) {
   const { variant } = await makeStyleWithVariant();
@@ -203,12 +211,12 @@ describe('sweepEtimsRetryQueue — backlog push-notification dedup', () => {
     try {
       await createFailingBacklog(6); // threshold is 5
       await sweepEtimsRetryQueue();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1);
 
       // Still above threshold on the next tick (submitInvoice still failing) — must not re-notify.
       await sweepEtimsRetryQueue();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1);
     } finally {
       sendSpy.mockRestore();
@@ -220,19 +228,19 @@ describe('sweepEtimsRetryQueue — backlog push-notification dedup', () => {
     try {
       await createFailingBacklog(6);
       await sweepEtimsRetryQueue();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1);
 
       // Let retries succeed now — the backlog clears.
       mockSubmitInvoice.mockImplementation(actualSubmitInvoice);
       await sweepEtimsRetryQueue();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1); // cleared, no new alert
 
       // A fresh episode forms.
       await createFailingBacklog(6);
       await sweepEtimsRetryQueue();
-      await flushAsync();
+      await waitForCalls(sendSpy, 2);
       expect(sendSpy).toHaveBeenCalledTimes(2);
     } finally {
       sendSpy.mockRestore();
@@ -255,11 +263,11 @@ describe('sweepLowStock — per-variant push-notification dedup', () => {
     const sendSpy = jest.spyOn(webpush, 'sendNotification').mockResolvedValue({});
     try {
       await sweepLowStock();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1);
 
       await sweepLowStock(); // still low, same variant — must not re-notify
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1);
 
       expect((await Variant.findById(variant._id)).stock).toBe(1); // unchanged — sweep never touches stock
@@ -273,17 +281,17 @@ describe('sweepLowStock — per-variant push-notification dedup', () => {
     const sendSpy = jest.spyOn(webpush, 'sendNotification').mockResolvedValue({});
     try {
       await sweepLowStock();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1);
 
       await Variant.findByIdAndUpdate(variant._id, { stock: 20 }); // restocked above threshold
       await sweepLowStock();
-      await flushAsync();
+      await waitForCalls(sendSpy, 1);
       expect(sendSpy).toHaveBeenCalledTimes(1); // no longer low — no new alert
 
       await Variant.findByIdAndUpdate(variant._id, { stock: 2 }); // dips low again
       await sweepLowStock();
-      await flushAsync();
+      await waitForCalls(sendSpy, 2);
       expect(sendSpy).toHaveBeenCalledTimes(2); // a fresh low episode for this variant
     } finally {
       sendSpy.mockRestore();

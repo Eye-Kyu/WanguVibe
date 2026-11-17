@@ -11,6 +11,9 @@ const connectDB = require('./config/db');
 const { globalLimiter } = require('./middleware/rateLimiters');
 const { startScheduledJobs } = require('./services/scheduledJobs');
 const logger = require('./utils/logger');
+const { validateEnvOrExit } = require('./config/validateEnv');
+
+validateEnvOrExit(logger);
 
 // A crash outside any request (a bad timer callback, an unawaited rejected
 // promise) would otherwise only ever show up as a stack trace in stdout —
@@ -52,6 +55,15 @@ const publicApiRoutes = require('./routes/publicApi');
 connectDB();
 
 const app = express();
+
+// Behind a reverse proxy / load balancer (Railway, Render, Nginx, …) every
+// request arrives from the proxy's address; without this, all customers
+// share one rate-limit bucket. Set TRUST_PROXY to the number of proxy hops
+// (usually 1). Never set it when the app is directly exposed.
+if (process.env.TRUST_PROXY) {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set('trust proxy', Number.isInteger(hops) ? hops : process.env.TRUST_PROXY);
+}
 
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
@@ -109,6 +121,10 @@ app.get('/health', (req, res) => {
     status: dbConnected ? 'ok' : 'degraded',
     db: mongoose.STATES[mongoose.connection.readyState],
     uptimeSeconds: Math.round(process.uptime()),
+    // Which integrations are live — a quick check that production isn't
+    // still on simulated payments/invoices.
+    modes: { mpesa: process.env.MPESA_MODE || 'mock', etims: process.env.ETIMS_MODE || 'mock', sms: process.env.SMS_MODE || 'mock' },
+    version: process.env.APP_VERSION || process.env.RAILWAY_GIT_COMMIT_SHA || null,
   });
 });
 

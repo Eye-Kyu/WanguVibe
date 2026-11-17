@@ -2,6 +2,7 @@ const express = require('express');
 const { reportError } = require('../utils/reportError');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const { MIN_PASSWORD_LENGTH, isAcceptablePassword } = require('../utils/password');
 const User = require('../models/User');
 
 const { protect, adminOnly } = require('../middleware/authMiddleware');
@@ -26,7 +27,10 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
 
         if (name && name.trim()) user.name = name.trim();
         if (role && ['admin', 'cashier'].includes(role)) user.role = role;
-        if (password && password.length >= 6) {
+        if (password !== undefined && password !== '') {
+            if (!isAcceptablePassword(password)) {
+                return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+            }
             user.password = await bcrypt.hash(password, 10);
         }
 

@@ -43,6 +43,10 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: http://localhost:5000/api
 
   smoke-test:
     name: Live API smoke test
@@ -64,6 +68,13 @@ jobs:
       JWT_SECRET: ci-smoke-test-secret
       MPESA_MODE: mock
       ETIMS_MODE: mock
+      # Throwaway credential for the ephemeral CI database only.
+      SMOKE_ADMIN_PASSWORD: ci-only-admin-password
+      # Throwaway VAPID keypair (same one the Jest suite uses) so the smoke
+      # test's push-subscription checks have keys to work with.
+      VAPID_PUBLIC_KEY: BK5dJtOSyxCydjST1XQXOH_qX54TGX30t6HVf9-4mmeVkZ2b3nuAOIhrQ6gYupkM3N9n0i2Cq4pZE_-xi2a2RRY
+      VAPID_PRIVATE_KEY: voj6XsbyFB6PEmUBbS4IxXJjiu78_6ot-guY0WioflI
+      VAPID_SUBJECT: mailto:ci@example.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -76,7 +87,7 @@ jobs:
         run: npm ci
       - name: Seed the first admin user
         working-directory: server
-        run: node scripts/seedAdmin.js admin "WanguNiW@ngu" "CI Admin"
+        run: node scripts/seedAdmin.js admin "$SMOKE_ADMIN_PASSWORD" "CI Admin"
       - name: Start server in the background
         working-directory: server
         run: nohup node server.js > server.log 2>&1 &
@@ -91,7 +102,7 @@ jobs:
           echo "Server never came up"; exit 1
       - name: Run the smoke test suite
         working-directory: server
-        run: node scripts/smokeTest.js http://localhost:5000 "WanguNiW@ngu"
+        run: node scripts/smokeTest.js http://localhost:5000
       - name: Dump server log on failure
         if: failure()
         working-directory: server

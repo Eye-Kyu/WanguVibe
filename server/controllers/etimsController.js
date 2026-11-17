@@ -53,14 +53,18 @@ async function attemptRetry(sale, entry) {
     return { success: true, invoiceNumber: result.invoiceNumber };
   }
 
+  const rejected = result.status === 'rejected';
+  sale.etimsStatus = rejected ? 'rejected' : 'unreachable';
+  await sale.save();
+
   if (entry) {
     entry.attempts += 1;
     entry.lastError = result.error;
     entry.lastAttemptAt = new Date();
-    entry.status = 'pending';
+    entry.status = rejected ? 'abandoned' : 'pending';
     await entry.save();
   } else {
-    await EtimsRetryQueue.create({ sale: sale._id, lastError: result.error, lastAttemptAt: new Date() });
+    await EtimsRetryQueue.create({ sale: sale._id, lastError: result.error, lastAttemptAt: new Date(), status: rejected ? 'abandoned' : 'pending' });
   }
 
   return { success: false, error: result.error };

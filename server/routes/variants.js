@@ -8,7 +8,7 @@ const variantController = require('../controllers/variantController');
 router.get('/low-stock', protect, variantController.getLowStockVariants);
 router.get('/forecast', protect, variantController.getReorderForecast);
 router.get('/lookup', protect, variantController.lookupByBarcode);
-router.put('/:id', protect, variantController.updateVariant);
+router.put('/:id', protect, checkRole('admin'), variantController.updateVariant);
 router.delete('/:id', protect, checkRole('admin'), variantController.deleteVariant);
 
 module.exports = router;

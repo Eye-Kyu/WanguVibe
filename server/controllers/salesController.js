@@ -9,6 +9,10 @@ const StoreCreditLedger = require('../models/StoreCreditLedger');
 const EtimsRetryQueue = require('../models/EtimsRetryQueue');
 const { logAudit } = require('../utils/auditLogger');
 const HttpError = require('../utils/httpError');
+const { isPositiveAmount, normalizeLineItems, normalizeCartDiscount, assertTotalMatches } = require('../utils/saleValidation');
+const { assertDiscountAllowed, resolveApproval } = require('../utils/approval');
+const { sendSms } = require('../services/sms');
+const { toE164Kenya, maskPhone } = require('../utils/phone');
 const { generateGiftCardCode } = require('../utils/giftCard');
 const { submitInvoice } = require('../services/etims');
 const { reportError } = require('../utils/reportError');
@@ -51,7 +55,7 @@ function normalizePayments({ paymentMethod, customer, giftCardCode, totalAmount,
     if (!PAYMENT_METHODS.includes(p.method)) {
       throw new HttpError(400, `Invalid payment method: "${p.method}"`);
     }
-    if (!p.amount || p.amount <= 0) {
+    if (!isPositiveAmount(p.amount)) {
       throw new HttpError(400, 'Each payment line must have an amount greater than 0');
     }
     if (p.method === 'store_credit' && !p.customer) {
@@ -108,11 +112,15 @@ async function submitSaleToEtims(sale, { simulateEtimsFailure } = {}) {
       sale.etimsSubmittedAt = new Date();
       await sale.save();
     } else {
-      sale.etimsStatus = 'unreachable';
+      // 'unreachable' is transient and the sweep retries it; 'rejected'
+      // means KRA refused the data itself, so it's parked for a human
+      // (abandoned) instead of being resent unchanged every 5 minutes.
+      const rejected = etimsResult.status === 'rejected';
+      sale.etimsStatus = rejected ? 'rejected' : 'unreachable';
       await sale.save();
       await EtimsRetryQueue.findOneAndUpdate(
         { sale: sale._id },
-        { $set: { lastError: etimsResult.error, lastAttemptAt: new Date(), status: 'pending' }, $inc: { attempts: 1 } },
+        { $set: { lastError: etimsResult.error, lastAttemptAt: new Date(), status: rejected ? 'abandoned' : 'pending' }, $inc: { attempts: 1 } },
         { upsert: true }
       );
     }
@@ -129,11 +137,20 @@ async function submitSaleToEtims(sale, { simulateEtimsFailure } = {}) {
 }
 exports.submitSaleToEtims = submitSaleToEtims;
 
-async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, customer, shift, giftCardsSold, giftCardCode, cashier, simulateEtimsFailure, payments }) {
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    throw new HttpError(400, 'Invalid or empty items');
-  }
-  if (!totalAmount || totalAmount <= 0) {
+// cashierRole/approvedBy are trusted server-side context — callers must
+// never pass them through from a request body (see createSale).
+const isValidClientSaleId = (id) => typeof id === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(id);
+
+// Replay of an already-saved sale (same till-generated key, same cashier):
+// return the original rather than charging/decrementing twice.
+async function findReplayedSale(clientSaleId, cashier) {
+  if (!isValidClientSaleId(clientSaleId)) return null;
+  return Sale.findOne({ clientSaleId, cashier });
+}
+
+async function finalizeSale({ items: rawItems, totalAmount, cartDiscount: rawCartDiscount, paymentMethod, customer, shift, giftCardsSold, giftCardCode, cashier, cashierRole, approvedBy, simulateEtimsFailure, payments, clientSaleId }) {
+  const items = normalizeLineItems(rawItems);
+  if (!isPositiveAmount(totalAmount)) {
     throw new HttpError(400, 'Invalid total amount');
   }
   const normalizedPayments = normalizePayments({ paymentMethod, customer, giftCardCode, totalAmount, payments });
@@ -141,15 +158,17 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
   if (Math.abs(paymentsSum - totalAmount) > 0.5) {
     throw new HttpError(400, 'Payment amounts do not sum to the total amount');
   }
-  if ((cartDiscount ?? 0) < 0 || (cartDiscount ?? 0) > 100) {
-    throw new HttpError(400, 'Cart discount must be between 0 and 100%');
-  }
+  const cartDiscount = normalizeCartDiscount(rawCartDiscount);
   if (!cashier) {
     throw new HttpError(401, 'User authentication required');
   }
+  assertDiscountAllowed(items, cartDiscount, { role: cashierRole, approvedBy });
+  if (clientSaleId !== undefined && clientSaleId !== null && !isValidClientSaleId(clientSaleId)) {
+    throw new HttpError(400, 'clientSaleId must be 8–64 letters, digits or dashes');
+  }
   const cardsToSell = Array.isArray(giftCardsSold) ? giftCardsSold : [];
   for (const gc of cardsToSell) {
-    if (!gc.amount || gc.amount <= 0) {
+    if (!isPositiveAmount(gc?.amount)) {
       throw new HttpError(400, 'Gift card amount must be greater than 0');
     }
   }
@@ -178,13 +197,6 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
         const variant = await Variant.findById(item.variant).populate('style', 'name basePrice').session(session);
         if (!variant) throw new HttpError(404, `Variant ${item.variant} not found`);
         if (!variant.style) throw new HttpError(404, `Style for variant ${item.variant} not found`);
-        if (variant.stock < item.quantity) {
-          throw new HttpError(400, `Insufficient stock for ${variant.style.name} (${variant.size}/${variant.color}). Only ${variant.stock} available.`);
-        }
-        if (item.discount < 0 || item.discount > 100) {
-          throw new HttpError(400, `Discount for ${variant.style.name} must be between 0 and 100%`);
-        }
-
         const unitPrice = variant.priceOverride ?? variant.style.basePrice;
         calculatedTotal += unitPrice * item.quantity * (1 - item.discount / 100);
 
@@ -195,32 +207,41 @@ async function finalizeSale({ items, totalAmount, cartDiscount, paymentMethod, c
           color: variant.color,
           unitPrice,
           quantity: item.quantity,
-          discount: item.discount || 0,
+          discount: item.discount,
         });
 
-        await Variant.findByIdAndUpdate(variant._id, { $inc: { stock: -item.quantity } }, { session });
+        // Guarded decrement — the stock check and the write are one atomic
+        // operation, so two concurrent sales can't both pass the check.
+        const decremented = await Variant.findOneAndUpdate(
+          { _id: variant._id, stock: { $gte: item.quantity } },
+          { $inc: { stock: -item.quantity } },
+          { session }
+        );
+        if (!decremented) {
+          throw new HttpError(400, `Insufficient stock for ${variant.style.name} (${variant.size}/${variant.color}). Only ${variant.stock} available.`);
+        }
         changedVariantIds.push(variant._id);
       }
 
-      calculatedTotal = calculatedTotal * (1 - (cartDiscount ?? 0) / 100);
+      calculatedTotal = calculatedTotal * (1 - cartDiscount / 100);
 
       // Gift cards sold are added at face value, after the merchandise
       // discount — a gift card isn't merchandise and shouldn't be discounted.
       const giftCardsTotal = cardsToSell.reduce((s, gc) => s + gc.amount, 0);
       calculatedTotal += giftCardsTotal;
 
-      if (Math.abs(calculatedTotal - totalAmount) > 0.5) {
-        throw new HttpError(400, 'Total amount does not match calculated total');
-      }
+      assertTotalMatches(calculatedTotal, totalAmount);
 
       sale = new Sale({
         items: builtItems,
         customer: customer || null,
         totalAmount,
-        cartDiscount: cartDiscount ?? 0,
+        cartDiscount,
         paymentMethod: normalizedPayments.length === 1 ? normalizedPayments[0].method : 'split',
         payments: normalizedPayments,
         cashier,
+        approvedBy: approvedBy || null,
+        clientSaleId: clientSaleId || undefined,
         shift: shift || null,
       });
 
@@ -334,14 +355,31 @@ exports.createSale = async (req, res) => {
     return res.status(401).json({ error: 'User authentication required' });
   }
   try {
-    const sale = await finalizeSale({ ...req.body, cashier: req.user.id });
+    // Strip anything the server sets itself so a client can't claim an
+    // approval or role it doesn't have.
+    // eslint-disable-next-line no-unused-vars
+    const { approval, approvedBy, cashierRole, cashier, ...body } = req.body || {};
+    const replay = await findReplayedSale(body.clientSaleId, req.user.id);
+    if (replay) return res.status(200).json(await populateSale(Sale.findById(replay._id)));
+
+    const verifiedApprover = await resolveApproval(req.body);
+    const sale = await finalizeSale({ ...body, cashier: req.user.id, cashierRole: req.user.role, approvedBy: verifiedApprover });
+    if (verifiedApprover) {
+      logAudit({ action: 'discount_approved', details: { saleId: sale._id, approvedBy: verifiedApprover }, userId: req.user.id });
+    }
     const populatedSale = await populateSale(Sale.findById(sale._id));
     if (!populatedSale.cashier) {
       return res.status(400).json({ error: 'Cashier information not found' });
     }
     res.status(201).json(populatedSale);
   } catch (err) {
-    if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
+    if (err instanceof HttpError) return res.status(err.status).json(HttpError.body(err));
+    if (err.code === 11000 && err.keyPattern?.clientSaleId) {
+      // Two copies of the same sale raced; the other one won — return it.
+      const replay = await findReplayedSale(req.body?.clientSaleId, req.user.id);
+      if (replay) return res.status(200).json(await populateSale(Sale.findById(replay._id)));
+      return res.status(409).json({ error: 'That sale reference is already in use' });
+    }
     reportError(req, err, 'Error creating sale');
     res.status(400).json({ error: err.message });
   }
@@ -415,6 +453,7 @@ exports.returnSale = async (req, res) => {
       sale = await Sale.findById(req.params.id).session(session);
       if (!sale) throw new HttpError(404, 'Sale not found');
       if (sale.status === 'returned') throw new HttpError(400, 'This sale has already been fully returned');
+      if (sale.status === 'voided') throw new HttpError(400, 'This sale has been voided');
       if (destination === 'store_credit' && !sale.customer) {
         throw new HttpError(400, "Sale has no customer on file — can't credit store balance");
       }
@@ -493,15 +532,133 @@ exports.returnSale = async (req, res) => {
   }
 };
 
-// DELETE sale by ID
-exports.deleteSale = async (req, res) => {
+// POST /api/sales/:id/void — admin-only full reversal that keeps the record
+// (sales are never hard-deleted: a deleted sale silently corrupted shift
+// cash totals and erased the evidence of what happened). Restocks every
+// item and sends each payment back the way it came:
+//   cash -> a cash refund entry (so the open shift's expected cash drops)
+//   store credit / gift card -> credited straight back to the balance
+//   card / M-Pesa -> recorded as owed back via the original method
+// Only a sale with no returns yet can be voided; anything else is a return.
+exports.voidSale = async (req, res) => {
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 300) : '';
+  if (!reason) return res.status(400).json({ error: 'A reason is required to void a sale' });
+
+  const session = await mongoose.startSession();
   try {
-    const sale = await Sale.findByIdAndDelete(req.params.id);
-    if (!sale) return res.status(404).json({ error: 'Sale not found' });
-    logAudit({ action: 'sale_deleted', details: { saleId: sale._id, totalAmount: sale.totalAmount }, userId: req.user.id });
-    res.json({ message: 'Sale deleted' });
+    let sale;
+    const changedVariantIds = [];
+    await session.withTransaction(async () => {
+      sale = await Sale.findById(req.params.id).session(session);
+      if (!sale) throw new HttpError(404, 'Sale not found');
+      if (sale.status === 'voided') throw new HttpError(400, 'This sale is already voided');
+      if (sale.status !== 'completed') {
+        throw new HttpError(400, 'This sale already has returns — process a return for the remaining items instead');
+      }
+
+      // Gift cards sold on this sale can only be clawed back if untouched.
+      for (const gc of sale.giftCardsSold || []) {
+        const card = await GiftCard.findOneAndUpdate(
+          { code: gc.code, status: 'active', $expr: { $eq: ['$currentBalance', '$initialBalance'] } },
+          { $set: { status: 'void', currentBalance: 0 } },
+          { session, new: true }
+        );
+        if (!card) throw new HttpError(400, `Gift card ${gc.code} from this sale has already been used — it can't be voided`);
+      }
+
+      for (const item of sale.items) {
+        await Variant.findByIdAndUpdate(item.variant, { $inc: { stock: item.quantity } }, { session });
+        item.returnedQuantity = item.quantity;
+        changedVariantIds.push(item.variant);
+      }
+
+      const lines = sale.payments?.length
+        ? sale.payments
+        : [{ method: sale.paymentMethod, amount: sale.totalAmount, customer: sale.customer }];
+      for (const line of lines) {
+        let destination = 'original_payment';
+        if (line.method === 'cash') destination = 'cash';
+        if (line.method === 'store_credit') {
+          destination = 'store_credit';
+          const customerId = line.customer || sale.customer;
+          await Customer.findByIdAndUpdate(customerId, { $inc: { storeCreditBalance: line.amount } }, { session });
+          await StoreCreditLedger.create([{
+            customer: customerId, amount: line.amount, reason: 'void_reversal', relatedSale: sale._id, createdBy: req.user.id,
+          }], { session });
+        }
+        if (line.method === 'gift_card') {
+          const code = sale.giftCardRedeemed?.code || line.giftCardCode?.trim().toUpperCase();
+          await GiftCard.findOneAndUpdate(
+            { code },
+            { $inc: { currentBalance: line.amount }, $set: { status: 'active' } },
+            { session }
+          );
+        }
+        sale.returns.push({ destination, amount: line.amount, items: [], processedBy: req.user.id });
+      }
+      // Gift cards sold were paid for too — that money goes back with the
+      // rest (already included in the payment lines' total).
+      sale.refundedAmount = sale.totalAmount;
+      sale.status = 'voided';
+      sale.void = { by: req.user.id, reason, at: new Date() };
+      await sale.save({ session });
+    });
+
+    logAudit({ action: 'sale_voided', details: { saleId: sale._id, totalAmount: sale.totalAmount, reason }, userId: req.user.id });
+    refetchAndBroadcast(changedVariantIds);
+    const populatedSale = await populateSale(Sale.findById(sale._id));
+    res.json(populatedSale);
   } catch (err) {
-    reportError(req, err, 'Error deleting sale');
-    res.status(500).json({ error: 'Server error deleting sale' });
+    if (err instanceof HttpError) return res.status(err.status).json(HttpError.body(err));
+    reportError(req, err, 'Error voiding sale');
+    res.status(400).json({ error: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+const PAYMENT_LABELS = { cash: 'cash', card: 'card', mpesa: 'M-Pesa', store_credit: 'store credit', gift_card: 'gift card', split: 'split payment' };
+
+function buildReceiptSms(sale) {
+  const business = process.env.BUSINESS_NAME || 'Wanguvibe';
+  const ref = sale._id.toString().slice(-8).toUpperCase();
+  const amount = Number(sale.totalAmount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const when = new Date(sale.createdAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short' });
+  const lines = sale.items.map((i) => `${i.quantity}x ${i.styleName} ${i.size}/${i.color}`);
+  const itemsText = lines.length <= 3 ? lines.join(', ') : `${lines.slice(0, 2).join(', ')} +${lines.length - 2} more`;
+  const parts = [
+    `${business} receipt #${ref}`,
+    `${itemsText}`,
+    `Total KES ${amount} (${PAYMENT_LABELS[sale.paymentMethod] || sale.paymentMethod}), ${when}.`,
+  ];
+  if (sale.giftCardsSold?.length) parts.push(`Gift card: ${sale.giftCardsSold.map((g) => g.code).join(', ')}.`);
+  if (sale.etimsInvoiceNumber) parts.push(`KRA invoice ${sale.etimsInvoiceNumber}.`);
+  parts.push('Thank you!');
+  return parts.join(' ');
+}
+exports.buildReceiptSms = buildReceiptSms;
+
+// POST /api/sales/:id/send-receipt { phone? } — texts the receipt to the
+// customer. Sent only when the cashier asks (the customer's consent at the
+// till), to the phone given or else the sale's customer on file.
+exports.sendReceiptSms = async (req, res) => {
+  try {
+    const sale = await Sale.findById(req.params.id).populate('customer', 'phone');
+    if (!sale) return res.status(404).json({ error: 'Sale not found' });
+    if (sale.status === 'voided') return res.status(400).json({ error: 'This sale has been voided' });
+
+    const phone = req.body?.phone || sale.customer?.phone;
+    if (!phone || !toE164Kenya(phone)) return res.status(400).json({ error: 'A valid Kenyan mobile number is required' });
+
+    const result = await sendSms(phone, buildReceiptSms(sale));
+    sale.receiptSms = { to: maskPhone(phone), at: new Date(), status: result.status };
+    await sale.save();
+    logAudit({ action: 'receipt_sms_sent', details: { saleId: sale._id, to: maskPhone(phone), status: result.status }, userId: req.user.id });
+
+    if (result.status !== 'sent') return res.status(502).json({ error: `SMS could not be sent: ${result.error}` });
+    res.json({ message: 'Receipt sent', to: maskPhone(phone) });
+  } catch (err) {
+    reportError(req, err, 'Error sending receipt SMS');
+    res.status(500).json({ error: 'Server error sending receipt' });
   }
 };

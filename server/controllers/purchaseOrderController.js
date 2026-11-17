@@ -7,6 +7,7 @@ const HttpError = require('../utils/httpError');
 const { logAudit } = require('../utils/auditLogger');
 const { reportError } = require('../utils/reportError');
 const { refetchAndBroadcast } = require('../services/stockBroadcast');
+const { computeReorderForecast } = require('./variantController');
 
 const populatePO = (query) => query
   .populate({ path: 'items.variant', select: 'sku barcode size color', populate: { path: 'style', select: 'name images' } })
@@ -176,5 +177,55 @@ exports.getPurchaseOrderById = async (req, res) => {
   } catch (err) {
     reportError(req, err, 'Error fetching purchase order');
     res.status(500).json({ error: 'Server error fetching purchase order' });
+  }
+};
+
+// POST /api/purchase-orders/from-forecast { supplier, variantIds, quantities? }
+// Turns selected reorder-forecast rows into one purchase order. Quantity
+// defaults to the forecast's suggestion (an explicit positive whole number
+// in `quantities[variantId]` overrides it); unit cost defaults to the
+// style's cost price and can be edited on the PO afterward.
+exports.createFromForecast = async (req, res) => {
+  try {
+    const { supplier, variantIds, quantities = {} } = req.body || {};
+    if (!supplier) return res.status(400).json({ error: 'A supplier is required' });
+    if (!Array.isArray(variantIds) || variantIds.length === 0) return res.status(400).json({ error: 'Select at least one item to reorder' });
+    if (variantIds.length > 200) return res.status(400).json({ error: 'Too many items in one order' });
+
+    const supplierDoc = await Supplier.findById(supplier);
+    if (!supplierDoc) return res.status(404).json({ error: 'Supplier not found' });
+
+    const { forecast } = await computeReorderForecast();
+    const suggested = new Map(forecast.map((f) => [f.variantId.toString(), f.suggestedReorderQty]));
+
+    const builtItems = [];
+    for (const id of [...new Set(variantIds.map(String))]) {
+      const override = quantities[id];
+      const qty = override !== undefined ? override : suggested.get(id);
+      if (!Number.isInteger(qty) || qty <= 0) continue; // nothing to order for this one
+      const variant = await Variant.findById(id).populate('style', 'name costPrice');
+      if (!variant || !variant.style) continue;
+      builtItems.push({
+        variant: variant._id,
+        styleName: variant.style.name,
+        size: variant.size,
+        color: variant.color,
+        quantityOrdered: qty,
+        unitCost: variant.style.costPrice || 0,
+      });
+    }
+    if (builtItems.length === 0) return res.status(400).json({ error: 'None of the selected items need reordering' });
+
+    const po = await PurchaseOrder.create({
+      supplier,
+      items: builtItems,
+      notes: 'Created from reorder forecast',
+      createdBy: req.user.id,
+    });
+    logAudit({ action: 'purchase_order_created', details: { purchaseOrderId: po._id, supplier, itemCount: builtItems.length, source: 'forecast' }, userId: req.user.id });
+    res.status(201).json(await populatePO(PurchaseOrder.findById(po._id)));
+  } catch (err) {
+    reportError(req, err, 'Error creating purchase order from forecast');
+    res.status(400).json({ error: err.message || 'Failed to create purchase order' });
   }
 };

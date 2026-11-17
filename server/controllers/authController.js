@@ -2,6 +2,9 @@ const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { MIN_PASSWORD_LENGTH, isAcceptablePassword } = require('../utils/password');
+const { isValidPin } = require('../utils/approval');
+const { logAudit } = require('../utils/auditLogger');
 const { REFRESH_TOKEN_TTL_MS, REFRESH_COOKIE_NAME, hashToken, generateRawToken, refreshCookieOptions } = require('../utils/refreshToken');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -33,6 +36,9 @@ exports.register = async (req, res) => {
 
         if (typeof username !== 'string' || typeof password !== 'string') {
             return res.status(400).json({ msg: 'Username and password must be strings' });
+        }
+        if (!isAcceptablePassword(password)) {
+            return res.status(400).json({ msg: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
         }
 
         const existing = await User.findOne({ username });
@@ -120,5 +126,29 @@ exports.logout = async (req, res) => {
         res.json({ msg: 'Logged out' });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+};
+
+// POST /api/auth/approval-pin — an admin sets (or changes) their own
+// manager-override PIN. Requires their current password so a session left
+// open on the till can't be used to set a PIN.
+exports.setApprovalPin = async (req, res) => {
+    try {
+        const { password, pin } = req.body || {};
+        if (!isValidPin(pin)) return res.status(400).json({ error: 'PIN must be 4–8 digits' });
+        if (typeof password !== 'string') return res.status(400).json({ error: 'Current password is required' });
+
+        const user = await User.findById(req.user.id);
+        if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Only admins can set an approval PIN' });
+        if (!(await bcrypt.compare(password, user.password))) return res.status(400).json({ error: 'Password is incorrect' });
+
+        user.approvalPinHash = await bcrypt.hash(pin, 10);
+        user.approvalPinFailures = 0;
+        user.approvalPinLockedUntil = null;
+        await user.save();
+        logAudit({ action: 'approval_pin_set', details: { userId: user._id }, userId: user._id });
+        res.json({ msg: 'Approval PIN saved' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to set approval PIN' });
     }
 };

@@ -7,7 +7,8 @@ const publicLookupController = require('../controllers/publicLookupController');
 // customer balance checker has no logged-in user to protect() with. Every
 // handler here must only ever return the minimal safe fields (see the
 // controller for what's deliberately excluded).
-router.get('/store-credit', publicLookupLimiter, publicLookupController.getStoreCreditBalance);
+router.post('/store-credit/request-code', publicLookupLimiter, publicLookupController.requestStoreCreditCode);
+router.post('/store-credit/verify', publicLookupLimiter, publicLookupController.verifyStoreCreditCode);
 router.get('/gift-card', publicLookupLimiter, publicLookupController.getGiftCardBalance);
 
 module.exports = router;

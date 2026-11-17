@@ -10,3 +10,6 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 process.env.VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BK5dJtOSyxCydjST1XQXOH_qX54TGX30t6HVf9-4mmeVkZ2b3nuAOIhrQ6gYupkM3N9n0i2Cq4pZE_-xi2a2RRY';
 process.env.VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'voj6XsbyFB6PEmUBbS4IxXJjiu78_6ot-guY0WioflI';
 process.env.VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:test@example.com';
+// Fixed callback token so tests can post a correctly-authenticated M-Pesa
+// callback (mock mode would otherwise generate a random one per process).
+process.env.MPESA_CALLBACK_TOKEN = process.env.MPESA_CALLBACK_TOKEN || 'test-mpesa-callback-token';

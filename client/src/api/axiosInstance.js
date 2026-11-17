@@ -1,5 +1,6 @@
 // src/api/axiosInstance.js
 import axios from 'axios';
+import { requestApproval } from '../approvalBridge';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -53,11 +54,35 @@ api.interceptors.response.use(
         } catch (refreshErr) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            window.location.href = '/'; // the login page lives at the root route
             return Promise.reject(refreshErr);
         } finally {
             refreshPromise = null;
         }
+    }
+);
+
+// Manager override: when the server says a request needs an admin's
+// approval (e.g. a discount over the cashier's limit), ask for it via the
+// <ApprovalPrompt /> modal and resend the same request with it attached.
+// Up to 3 tries for a mistyped PIN; cancelling rejects with the original error.
+const MAX_APPROVAL_TRIES = 3;
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const { config, response } = error;
+        const code = response?.data?.code;
+        if (response?.status !== 403 || (code !== 'APPROVAL_REQUIRED' && code !== 'APPROVAL_INVALID') || !config) {
+            return Promise.reject(error);
+        }
+        const tries = config._approvalTries || 0;
+        if (tries >= MAX_APPROVAL_TRIES) return Promise.reject(error);
+
+        const approval = await requestApproval(response.data.error, { invalid: code === 'APPROVAL_INVALID' });
+        if (!approval) return Promise.reject(error);
+
+        const original = typeof config.data === 'string' ? JSON.parse(config.data || '{}') : (config.data || {});
+        return api({ ...config, data: { ...original, approval }, _approvalTries: tries + 1 });
     }
 );
 

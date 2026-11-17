@@ -4,7 +4,7 @@ import {
     IconHome, IconReceipt, IconHanger, IconUsers, IconBox,
     IconClipboard, IconClock, IconGift, IconRefresh, IconUser, IconTag,
     IconPhone, IconCart, IconTrendingUp, IconAlertTriangle, IconBarChart,
-    IconWebhook, IconKey,
+    IconWebhook, IconKey, IconCash,
 } from '../components/icons';
 
 export const ADMIN_NAV_ITEMS = [
@@ -18,6 +18,7 @@ export const ADMIN_NAV_ITEMS = [
     { to: '/admin/margins', label: 'Margin Report', Icon: IconTrendingUp },
     { to: '/admin/forecast', label: 'Reorder Forecast', Icon: IconAlertTriangle },
     { to: '/admin/analytics', label: 'Analytics', Icon: IconBarChart },
+    { to: '/admin/exceptions', label: 'Exceptions', Icon: IconAlertTriangle },
     { to: '/admin/webhooks', label: 'Webhooks', Icon: IconWebhook },
     { to: '/admin/api-keys', label: 'API Keys', Icon: IconKey },
     { to: '/admin/audit', label: 'Audit Log', Icon: IconClipboard },
@@ -25,5 +26,6 @@ export const ADMIN_NAV_ITEMS = [
     { to: '/admin/giftcards', label: 'Gift Cards', Icon: IconGift },
     { to: '/admin/layaways', label: 'Layaways', Icon: IconTag },
     { to: '/admin/etims', label: 'eTIMS Retry', Icon: IconRefresh },
+    { to: '/admin/refunds', label: 'M-Pesa Refunds', Icon: IconCash },
     { to: '/admin/users', label: 'Users', Icon: IconUser },
 ];
