@@ -51,18 +51,10 @@ jobs:
   smoke-test:
     name: Live API smoke test
     runs-on: ubuntu-latest
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
     env:
-      MONGO_URI: mongodb://127.0.0.1:27017/wanguvibe_ci
+      # Single-node replica set: sales, returns, layaways and PO receiving
+      # all use transactions, which a standalone mongod rejects.
+      MONGO_URI: mongodb://127.0.0.1:27017/wanguvibe_ci?replicaSet=rs0&directConnection=true
       PORT: 5000
       CLIENT_URL: http://localhost:5173
       JWT_SECRET: ci-smoke-test-secret
@@ -82,6 +74,21 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: server/package-lock.json
+      - name: Start MongoDB as a single-node replica set
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:7 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval "db.runCommand({ping:1})" >/dev/null 2>&1 && break
+            sleep 1
+          done
+          docker exec mongo mongosh --quiet --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: '127.0.0.1:27017'}]})"
+          for i in $(seq 1 30); do
+            if docker exec mongo mongosh --quiet --eval "db.hello().isWritablePrimary" | grep -q true; then
+              echo "Replica set primary ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Replica set never became primary"; exit 1
       - name: Install server deps
         working-directory: server
         run: npm ci
