@@ -204,7 +204,7 @@ export default function SuppliersPage() {
                 <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Supplier</th>
                                 <th className="px-4 py-3 text-left">Contact</th>
                                 <th className="px-4 py-3 text-left">Phone</th>

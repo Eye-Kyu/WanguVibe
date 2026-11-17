@@ -16,7 +16,7 @@ const RANGES = [
 function Stat({ label, value, tone = "text-gray-900" }) {
     return (
         <div className="bg-white border border-gray-100 rounded-sm p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
+            <p className="text-xs text-gray-500">{label}</p>
             <p className={`text-xl font-semibold mt-1 ${tone}`}>{value}</p>
         </div>
     );
@@ -47,7 +47,7 @@ function WeeklySummaryCard() {
     return (
         <div className="bg-indigo-50 border border-indigo-100 rounded-sm p-4 flex flex-col sm:flex-row sm:items-start gap-3">
             <div className="flex-1">
-                <p className="text-xs uppercase tracking-wide text-indigo-700 font-semibold">Weekly summary (sent Mondays 8am)</p>
+                <p className="text-xs text-indigo-700 font-semibold">Weekly summary (sent Mondays 8am)</p>
                 <p className="text-sm text-gray-800 mt-1">{text}</p>
             </div>
             <button onClick={send} disabled={sending} className="self-start px-3 py-1.5 text-sm rounded-xl border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50">
@@ -124,7 +124,7 @@ export default function ExceptionsPage() {
                         ) : (
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                                    <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                         <th className="px-4 py-3 text-left">Person</th>
                                         <th className="px-4 py-3 text-right">Sales</th>
                                         <th className="px-4 py-3 text-right">Discounts</th>

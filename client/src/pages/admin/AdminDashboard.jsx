@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ThemeContext } from '../../context/ThemeContext';
+import { chartColor } from '../../config/chartColors';
 import ErrorState from '../../components/ErrorState';
 import api from '../../api/axiosInstance';
 import { toast, ToastContainer } from 'react-toastify';
@@ -17,7 +18,9 @@ import { IconHanger, IconUser, IconReceipt } from '../../components/icons';
 const fmt = (n) =>
     Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const PAYMENT_COLORS = { Cash: '#2563eb', 'M-Pesa': '#16a34a', Card: '#9333ea' };
+// Series slots in the Coral chart palette (see src/tokens.css): cash in ink,
+// M-Pesa in sage, card in clay; anything else falls back to stone.
+const PAYMENT_SERIES = { Cash: '1', 'M-Pesa': '3', Card: '2' };
 
 const RANGE_LABELS = { day: 'Today', week: 'This Week', month: 'This Month' };
 
@@ -26,7 +29,7 @@ const RANGE_LABELS = { day: 'Today', week: 'This Week', month: 'This Month' };
 function StatPill({ label, value }) {
     return (
         <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
             <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{value}</p>
         </div>
     );
@@ -110,9 +113,9 @@ const ONBOARDING_STEPS = [
 
 function OnboardingBanner() {
     return (
-        <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 rounded-sm p-6 text-white shadow-lg shadow-indigo-950/10 animate-fade-in">
-            <h2 className="text-lg font-bold">Welcome to Wanguvibe POS 👋</h2>
-            <p className="text-sm text-white/80 mt-1 mb-4">Your catalog is empty — here's how to get selling:</p>
+        <div className="bg-gray-900 dark:bg-gray-800 rounded-sm p-6 text-white shadow-lg animate-fade-in">
+            <h2 className="text-lg font-semibold tracking-tight">Welcome to Wanguvibe POS</h2>
+            <p className="text-sm text-white/80 mt-1 mb-4">Your catalog is empty. Here’s how to get selling:</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {ONBOARDING_STEPS.map((step, i) => (
                     <Link
@@ -146,8 +149,9 @@ const AdminDashboard = () => {
     const { theme } = useContext(ThemeContext);
     const isDark = theme === 'dark';
     const tooltipContentStyle = isDark
-        ? { background: '#1f2937', border: '1px solid #374151', borderRadius: '0.75rem', color: '#f3f4f6' }
+        ? { background: chartColor('cursor', true), border: `1px solid ${chartColor('grid', true)}`, borderRadius: '8px', color: chartColor('1', true) }
         : undefined;
+    const paymentColor = (name) => chartColor(PAYMENT_SERIES[name] ?? '6', isDark);
 
     const fetchDashboard = useCallback(() => {
         setLoading(true);
@@ -251,7 +255,7 @@ const AdminDashboard = () => {
                     variant="amber"
                     label="Best Seller"
                     value={data?.bestSeller || '—'}
-                    sub={data?.bestSeller ? `Top style — ${RANGE_LABELS[range]}` : 'No sales this period'}
+                    sub={data?.bestSeller ? `Top style (${RANGE_LABELS[range]})` : 'No sales this period'}
                 />
             </div>
 
@@ -332,7 +336,7 @@ const AdminDashboard = () => {
                                         {data.paymentBreakdown.map((entry) => (
                                             <Cell
                                                 key={entry.name}
-                                                fill={PAYMENT_COLORS[entry.name] ?? '#94a3b8'}
+                                                fill={paymentColor(entry.name)}
                                             />
                                         ))}
                                     </Pie>
@@ -347,7 +351,7 @@ const AdminDashboard = () => {
                                         <span className="flex items-center gap-2">
                                             <span
                                                 className="inline-block w-3 h-3 rounded-full"
-                                                style={{ background: PAYMENT_COLORS[p.name] ?? '#94a3b8' }}
+                                                style={{ background: paymentColor(p.name) }}
                                             />
                                             <span className="text-gray-700 dark:text-gray-300">{p.name}</span>
                                         </span>
@@ -382,7 +386,7 @@ const AdminDashboard = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-gray-50 dark:bg-gray-800/50 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                <tr className="bg-gray-50 dark:bg-gray-800/50 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
                                     <th className="px-5 py-3">ID</th>
                                     <th className="px-5 py-3">Date & Time</th>
                                     <th className="px-5 py-3">Items</th>

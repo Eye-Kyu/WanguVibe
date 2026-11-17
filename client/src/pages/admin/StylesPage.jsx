@@ -12,9 +12,9 @@ const totalStock = (style) => (style.variants || []).reduce((s, v) => s + (v.act
 
 function StockBadge({ stock }) {
     if (stock === 0) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Out of stock</span>;
-    if (stock < 5) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">{stock} — Critical</span>;
-    if (stock < 15) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{stock} — Low</span>;
-    return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">{stock} — OK</span>;
+    if (stock < 5) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Critical: {stock}</span>;
+    if (stock < 15) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Low: {stock}</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">In stock: {stock}</span>;
 }
 
 // ─── Style create/edit form ──────────────────────────────────────────────────
@@ -103,7 +103,7 @@ function StyleFormModal({ initial, onSave, onClose, submitting }) {
                                 value={form.category}
                                 onChange={e => set('category', e.target.value)}
                             >
-                                <option value="">— Select —</option>
+                                <option value="">Select…</option>
                                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
@@ -236,7 +236,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
             <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
                     <div>
-                        <h2 className="font-semibold text-gray-800">Sizes &amp; Colors — {style.name}</h2>
+                        <h2 className="font-semibold text-gray-800">Sizes &amp; Colors: {style.name}</h2>
                         <p className="text-xs text-gray-500 mt-0.5">Each row is one sellable size/color, with its own barcode and stock</p>
                     </div>
                     <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
@@ -245,7 +245,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                 <div className="p-5">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                                 <th className="pb-2 text-left">Size</th>
                                 <th className="pb-2 text-left">Color</th>
                                 <th className="pb-2 text-left">SKU</th>
@@ -307,7 +307,7 @@ function VariantManagerModal({ style, onClose, onChanged }) {
                         </tbody>
                     </table>
                     {variants.length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-6">No variants yet — add the first size/color above.</p>
+                        <p className="text-sm text-gray-500 text-center py-6">No variants yet. Add the first size/color above.</p>
                     )}
                 </div>
 
@@ -375,13 +375,13 @@ function LabelPrintModal({ style, onClose }) {
             return `<div class="label">
                 <img src="${canvas.toDataURL('image/png')}" />
                 <div class="label-name">${style.name}</div>
-                <div class="label-sub">${v.size}/${v.color} · KES ${price(v)}</div>
+                <div class="label-sub">${v.size}/${v.color}, KES ${price(v)}</div>
                 <div class="label-code">${code}</div>
             </div>`;
         }).join('');
 
         const w = window.open('', '', 'width=800,height=600');
-        w.document.write(`<html><head><title>Labels — ${style.name}</title><style>
+        w.document.write(`<html><head><title>Labels: ${style.name}</title><style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 8px; }
             .sheet { display: flex; flex-wrap: wrap; gap: 4px; }
             .label { width: 190px; padding: 6px 4px; border: 1px dashed #ccc; text-align: center; page-break-inside: avoid; }
@@ -399,7 +399,7 @@ function LabelPrintModal({ style, onClose }) {
             <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
                     <div>
-                        <h2 className="font-semibold text-gray-800">Print Labels — {style.name}</h2>
+                        <h2 className="font-semibold text-gray-800">Print Labels: {style.name}</h2>
                         <p className="text-xs text-gray-500 mt-0.5">Set how many labels to print for each size/color</p>
                     </div>
                     <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 text-xl leading-none">&times;</button>
@@ -415,7 +415,7 @@ function LabelPrintModal({ style, onClose }) {
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                                <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                                     <th className="pb-2 text-left">Size/Color</th>
                                     <th className="pb-2 text-left">Code</th>
                                     <th className="pb-2 text-right">Stock</th>
@@ -550,7 +550,7 @@ export default function ProductsPage() {
                 toast.success('Style updated');
             } else {
                 await api.post('/styles', fd, config);
-                toast.success('Style added — now add its sizes/colors');
+                toast.success('Style added. Now add its sizes/colors.');
             }
             setModalStyle(null);
             fetchStyles();
@@ -584,7 +584,7 @@ export default function ProductsPage() {
                     <p className="text-sm text-gray-500 mt-0.5">
                         {styles.length} styles
                         {lowStockCount > 0 && (
-                            <span className="ml-2 text-amber-600 font-medium">· {lowStockCount} low/out of stock</span>
+                            <span className="ml-2 text-amber-700 font-medium">({lowStockCount} low or out of stock)</span>
                         )}
                     </p>
                 </div>
@@ -646,14 +646,14 @@ export default function ProductsPage() {
                 <ErrorState message="Failed to load styles" onRetry={fetchStyles} />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
                     <p className="text-sm">No styles found</p>
                 </div>
             ) : (
                 <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left w-16">Image</th>
                                 <th className="px-4 py-3 text-left">Name</th>
                                 <th className="px-4 py-3 text-left">Style Code</th>
@@ -722,12 +722,12 @@ export default function ProductsPage() {
 
             {totalPages > 1 && (
                 <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>Page {currentPage} of {totalPages} · {filtered.length} results</span>
+                    <span>Page {currentPage} of {totalPages} ({filtered.length} results)</span>
                     <div className="flex gap-1">
-                        <button onClick={() => setPage(1)} disabled={currentPage === 1} aria-label="First page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">«</button>
-                        <button onClick={() => setPage(p => p - 1)} disabled={currentPage === 1} aria-label="Previous page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">‹</button>
-                        <button onClick={() => setPage(p => p + 1)} disabled={currentPage === totalPages} aria-label="Next page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">›</button>
-                        <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} aria-label="Last page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">»</button>
+                        <button onClick={() => setPage(1)} disabled={currentPage === 1} aria-label="First page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">First</button>
+                        <button onClick={() => setPage(p => p - 1)} disabled={currentPage === 1} aria-label="Previous page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Prev</button>
+                        <button onClick={() => setPage(p => p + 1)} disabled={currentPage === totalPages} aria-label="Next page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Next</button>
+                        <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} aria-label="Last page" className="px-2 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">Last</button>
                     </div>
                 </div>
             )}

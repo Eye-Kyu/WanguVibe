@@ -1,6 +1,8 @@
+import { useContext } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ThemeContext } from '../../context/ThemeContext';
+import { chartSeries } from '../../config/chartColors';
 
-const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 
 function CustomTooltip({ active, payload }) {
     if (!active || !payload?.length) return null;
@@ -13,6 +15,8 @@ function CustomTooltip({ active, payload }) {
 }
 
 export default function PieChartBestsellers({ data = [] }) {
+    const { theme } = useContext(ThemeContext);
+    const COLORS = chartSeries(theme === 'dark');
     return (
         <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-sm p-5">
             <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Top 5 Bestsellers</h2>

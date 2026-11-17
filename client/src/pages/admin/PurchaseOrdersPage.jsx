@@ -224,7 +224,7 @@ function PODetailModal({ po, onClose, onUpdated }) {
                 <div className="overflow-y-auto flex-1">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs text-gray-500 border-b border-gray-100">
                                 <th className="px-5 py-2 text-left">Item</th>
                                 <th className="px-5 py-2 text-right">Ordered</th>
                                 <th className="px-5 py-2 text-right">Received</th>
@@ -369,7 +369,7 @@ export default function PurchaseOrdersPage() {
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Supplier</th>
                                 <th className="px-4 py-3 text-left">Items</th>
                                 <th className="px-4 py-3 text-right">Total Cost</th>

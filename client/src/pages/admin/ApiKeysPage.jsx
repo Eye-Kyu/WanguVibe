@@ -47,7 +47,7 @@ function KeyRevealModal({ apiKey, onClose }) {
             <div className="bg-white rounded-sm shadow-xl w-full max-w-md p-6 space-y-4">
                 <h2 className="font-semibold text-gray-800">API key created</h2>
                 <p className="text-sm text-gray-500">
-                    This key is shown once. Send it as the <code className="text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header on requests to <code className="text-xs bg-gray-100 px-1 rounded">/api/v1/*</code> — it won't be shown again. If lost, revoke it and create a new one.
+                    This key is shown once. Send it as the <code className="text-xs bg-gray-100 px-1 rounded">X-API-Key</code> header on requests to <code className="text-xs bg-gray-100 px-1 rounded">/api/v1/*</code>. It won’t be shown again. If lost, revoke it and create a new one.
                 </p>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-mono text-xs break-all">{apiKey}</div>
                 <div className="flex justify-end gap-3">
@@ -143,7 +143,7 @@ export default function ApiKeysPage() {
                 <div className="bg-gradient-to-br from-white to-gray-50 rounded-sm border border-gray-100 shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Label</th>
                                 <th className="px-4 py-3 text-left">Last Used</th>
                                 <th className="px-4 py-3 text-left">Status</th>

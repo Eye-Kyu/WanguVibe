@@ -21,7 +21,7 @@ function MarginTable({ title, rows, nameKey, nameLabel }) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                            <tr className="text-xs font-semibold text-gray-500 border-b border-gray-100">
                                 <th className="px-5 pb-2 pt-3 text-left">{nameLabel}</th>
                                 {nameKey === 'name' && <th className="px-5 pb-2 pt-3 text-left">Category</th>}
                                 <th className="px-5 pb-2 pt-3 text-right">Qty Sold</th>

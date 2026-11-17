@@ -125,7 +125,7 @@ export default function CommandPalette() {
                             >
                                 <action.Icon className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                                 <span className="text-sm text-gray-800 dark:text-gray-100 flex-1">{action.label}</span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">{action.hint}</span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">{action.hint}</span>
                             </button>
                         ))
                     )}

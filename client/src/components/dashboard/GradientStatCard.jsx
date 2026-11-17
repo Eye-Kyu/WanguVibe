@@ -1,36 +1,37 @@
-// Shared "hero stat" card — rich gradient instead of flat white, used on both
-// the admin dashboard and the sales page. The "600"-weighted Tailwind shades
-// in each gradient are chosen specifically because white text on them clears
-// WCAG AA comfortably (>4.5:1) at every stop, so trend/label/sub text never
-// needs per-card contrast tuning.
-const GRADIENTS = {
-    indigo: 'from-indigo-500 via-indigo-600 to-violet-600',
-    violet: 'from-violet-500 via-purple-600 to-fuchsia-600',
-    emerald: 'from-emerald-500 via-emerald-600 to-teal-600',
-    amber: 'from-amber-400 via-orange-500 to-orange-600',
-    rose: 'from-rose-500 via-pink-600 to-fuchsia-600',
+// Shared "hero stat" card, used on the admin dashboard and the sales page.
+// Coral restyle: a cotton card with the figure in ink, not a coloured
+// gradient. `variant` is still accepted (callers pass it) and only tints the
+// thin rule along the card's top edge, so the four stats stay tellable apart
+// without colour carrying meaning on its own.
+const RULES = {
+    indigo: 'before:bg-gray-900 dark:before:bg-gray-100',
+    violet: 'before:bg-gray-500',
+    emerald: 'before:bg-green-600',
+    amber: 'before:bg-amber-500',
+    rose: 'before:bg-red-500',
 };
 
 export default function GradientStatCard({ label, value, trend, trendLabel, sub, variant = 'indigo' }) {
     const hasTrend = trend !== null && trend !== undefined;
     return (
-        <div className={`relative overflow-hidden rounded-sm p-5 flex flex-col gap-1 text-white shadow-lg shadow-indigo-950/10 bg-gradient-to-br ${GRADIENTS[variant]}`}>
-            <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-            <p className="text-xs font-semibold text-white/75 uppercase tracking-wider relative">{label}</p>
-            <p className="text-2xl font-bold text-white truncate relative">{value}</p>
-            <div className="flex items-center gap-2 min-h-[20px] relative">
+        <div className={`relative overflow-hidden rounded-sm p-5 flex flex-col gap-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-md before:absolute before:inset-x-0 before:top-0 before:h-0.5 ${RULES[variant] || RULES.indigo}`}>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>
+            <p className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50 truncate tabular-nums">{value}</p>
+            <div className="flex items-center gap-2 min-h-[20px]">
                 {hasTrend && (
-                    <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        trend >= 0 ? 'bg-white/25 text-white' : 'bg-black/20 text-red-100'
+                    <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full tabular-nums ${
+                        trend >= 0
+                            ? 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                            : 'bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                     }`}>
-                        {trend >= 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
+                        {trend >= 0 ? '+' : '−'}{Math.abs(trend).toFixed(1)}%
                     </span>
                 )}
                 {trendLabel && hasTrend && (
-                    <span className="text-xs text-white/65">{trendLabel}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{trendLabel}</span>
                 )}
             </div>
-            {sub && <p className="text-xs text-white/75 relative">{sub}</p>}
+            {sub && <p className="text-xs text-gray-500 dark:text-gray-400">{sub}</p>}
         </div>
     );
 }

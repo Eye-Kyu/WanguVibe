@@ -3,7 +3,7 @@ import api from '../../api/axiosInstance';
 import { toast } from 'react-toastify';
 import ErrorState from '../../components/ErrorState';
 
-const variantLabel = (v, styleName) => `${styleName} — ${v.size}/${v.color}`;
+const variantLabel = (v, styleName) => `${styleName} (${v.size}/${v.color})`;
 
 function RestockModal({ variants, preselected, onSave, onClose, submitting }) {
     const [query, setQuery] = useState('');
@@ -182,7 +182,7 @@ export default function InventoryPage() {
                         <tbody className="divide-y divide-gray-50">
                             {lowStock.map(v => (
                                 <tr key={v._id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-2.5 text-gray-800">{v.style?.name} — {v.size}/{v.color}</td>
+                                    <td className="px-4 py-2.5 text-gray-800">{v.style?.name} ({v.size}/{v.color})</td>
                                     <td className="px-4 py-2.5 text-gray-500 text-xs">{v.stock} in stock (reorder at {v.reorderThreshold})</td>
                                     <td className="px-4 py-2.5 text-right">
                                         <button
@@ -211,7 +211,7 @@ export default function InventoryPage() {
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                            <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 text-xs">
                                 <th className="px-4 py-3 text-left">Date</th>
                                 <th className="px-4 py-3 text-left">Variant</th>
                                 <th className="px-4 py-3 text-left">Action</th>
@@ -224,7 +224,7 @@ export default function InventoryPage() {
                                 <tr key={log._id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(log.date).toLocaleString()}</td>
                                     <td className="px-4 py-2.5 text-gray-800">
-                                        {log.variant?.style?.name || 'Unknown'} — {log.variant?.size}/{log.variant?.color}
+                                        {log.variant?.style?.name || 'Unknown'} ({log.variant?.size}/{log.variant?.color})
                                     </td>
                                     <td className="px-4 py-2.5 text-gray-500 capitalize text-xs">{log.action}</td>
                                     <td className="px-4 py-2.5 text-right font-medium text-green-600">+{log.quantity}</td>

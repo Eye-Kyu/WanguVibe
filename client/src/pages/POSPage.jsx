@@ -33,7 +33,7 @@ function FailedSalesModal({ sales, onRetry, onDiscard, onClose }) {
                     {sales.map((s) => (
                         <li key={s.id} className="px-5 py-3 space-y-1">
                             <div className="flex justify-between text-sm">
-                                <span className="font-medium text-gray-900 dark:text-gray-100">KES {Number(s.payload.totalAmount || 0).toFixed(2)} · {s.payload.paymentMethod}</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">KES {Number(s.payload.totalAmount || 0).toFixed(2)}, {s.payload.paymentMethod}</span>
                                 <span className="text-xs text-gray-500">{new Date(s.queuedAt).toLocaleString()}</span>
                             </div>
                             <p className="text-xs text-gray-600 dark:text-gray-400">{s.payload.items?.length || 0} item(s)</p>
@@ -83,14 +83,14 @@ const StyleCard = memo(({ style, onOpen }) => {
         <button
             onClick={() => onOpen(style)}
             disabled={outOfStock}
-            className={`group relative bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-xl border text-left transition-all duration-150 overflow-hidden
+            className={`group relative bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-xl border text-left transition duration-150 overflow-hidden
                 ${outOfStock
                     ? 'border-red-100 bg-red-50/30 opacity-60 cursor-not-allowed'
                     : 'border-gray-100 dark:border-gray-800 hover:border-green-400 hover:shadow-md hover:shadow-green-100 active:scale-[0.97] shadow-sm'}`}
         >
             <div className="relative bg-gray-50 dark:bg-gray-900 aspect-square overflow-hidden">
                 {style.images?.[0]
-                    ? <img src={style.images[0]} alt={style.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" />
+                    ? <img src={style.images[0]} alt={style.name} className="w-full h-full object-cover transition-transform duration-200" loading="lazy" />
                     : <div className="w-full h-full flex items-center justify-center text-gray-200 dark:text-gray-300"><IconPhoto className="w-12 h-12" /></div>
                 }
                 {!outOfStock && (
@@ -152,7 +152,7 @@ const VariantPicker = memo(({ style, onClose, onSelect }) => {
                 <div className="p-5 space-y-4">
                     {Object.entries(byColor).map(([color, variants]) => (
                         <div key={color}>
-                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{color}</p>
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{color}</p>
                             <div className="flex flex-wrap gap-2">
                                 {variants.map(v => {
                                     const disabled = v.active === false || v.stock <= 0;
@@ -161,7 +161,7 @@ const VariantPicker = memo(({ style, onClose, onSelect }) => {
                                             key={v._id}
                                             disabled={disabled}
                                             onClick={() => onSelect(style, v)}
-                                            className={`px-3.5 py-2 rounded-xl text-sm font-semibold border-2 transition-all relative
+                                            className={`px-3.5 py-2 rounded-xl text-sm font-semibold border-2 transition relative
                                                 ${disabled
                                                     ? 'border-gray-100 dark:border-gray-800 text-gray-300 dark:text-gray-400 cursor-not-allowed'
                                                     : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-green-500 hover:text-green-700'}`}
@@ -203,10 +203,10 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                 </div>
                 <button
                     onClick={() => onRemove(item.variantId)}
-                    className="w-5 h-5 rounded-lg flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 transition-all flex-shrink-0"
+                    className="w-5 h-5 rounded-lg flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 transition flex-shrink-0"
                     aria-label={t('pos.cart.removeItem')}
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -217,13 +217,13 @@ const CartLine = memo(({ item, onQtyChange, onRemove, onDiscountChange, calcTota
                     <button
                         onClick={() => onQtyChange(item.variantId, -1)}
                         disabled={item.quantity <= 1}
-                        className="w-6 h-6 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-300 text-sm font-bold flex items-center justify-center transition-all"
+                        className="w-6 h-6 rounded-lg border border-red-200 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-300 text-sm font-bold flex items-center justify-center transition"
                     >-</button>
                     <span className="text-sm font-semibold w-6 text-center tabular-nums">{item.quantity}</span>
                     <button
                         onClick={() => onQtyChange(item.variantId, 1)}
                         disabled={item.quantity >= item.stock}
-                        className="w-6 h-6 rounded-lg border border-green-300 text-green-600 hover:bg-green-600 hover:text-white hover:border-green-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-green-400 text-sm font-bold flex items-center justify-center transition-all"
+                        className="w-6 h-6 rounded-lg border border-green-300 text-green-600 hover:bg-green-600 hover:text-white hover:border-green-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-green-400 text-sm font-bold flex items-center justify-center transition"
                     >+</button>
                 </div>
                 <div className="flex items-center gap-1">
@@ -257,12 +257,12 @@ const OpenShiftModal = memo(({ onOpen, submitting }) => {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
             <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-t-2xl">
+                <div className="px-5 py-4 bg-gray-900 dark:bg-gray-950 text-white rounded-t-2xl">
                     <p className="font-bold">Open Shift</p>
                     <p className="text-xs opacity-80 mt-0.5">Count the cash drawer before ringing up any sales</p>
                 </div>
                 <div className="p-5 space-y-3">
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opening Float (KES)</label>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Opening Float (KES)</label>
                     <input
                         type="number"
                         min="0"
@@ -294,12 +294,12 @@ const CloseShiftModal = memo(({ shift, onClose, onConfirm, submitting }) => {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
             <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                <div className="px-5 py-4 bg-gradient-to-br from-gray-800 to-gray-950 text-white rounded-t-2xl">
+                <div className="px-5 py-4 bg-gray-900 dark:bg-gray-950 text-white rounded-t-2xl">
                     <p className="font-bold">Close Shift</p>
                     <p className="text-xs opacity-70 mt-0.5">Opened with KES {shift.openingFloat.toFixed(2)} float</p>
                 </div>
                 <div className="p-5 space-y-3">
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Counted Cash (KES)</label>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Counted Cash (KES)</label>
                     <input
                         type="number"
                         min="0"
@@ -337,12 +337,12 @@ const SellGiftCardModal = memo(({ onClose, onAdd }) => {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
             <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-t-2xl flex items-center gap-2">
+                <div className="px-5 py-4 bg-gray-900 dark:bg-gray-950 text-white rounded-t-2xl flex items-center gap-2">
                     <IconGift className="w-5 h-5" />
                     <p className="font-bold">Sell Gift Card</p>
                 </div>
                 <div className="p-5 space-y-3">
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount (KES)</label>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Amount (KES)</label>
                     <input
                         type="number"
                         min="0"
@@ -454,7 +454,7 @@ const CustomerPicker = memo(({ selected, onSelect }) => {
                             onClick={() => onSelect(c)}
                             className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between"
                         >
-                            <span className="text-gray-700 dark:text-gray-300">{c.name}{c.phone ? ` · ${c.phone}` : ''}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{c.name}{c.phone ? ` (${c.phone})` : ''}</span>
                             <span className="text-gray-500 dark:text-gray-400">KES {c.storeCreditBalance.toFixed(2)}</span>
                         </button>
                     ))}
@@ -572,7 +572,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                <div className="px-5 py-4 bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-t-2xl">
+                <div className="px-5 py-4 bg-gray-900 dark:bg-gray-950 text-white rounded-t-2xl">
                     <p className="text-sm font-medium opacity-80">{t('pos.payment.amountDue')}</p>
                     <p className="text-3xl font-black tabular-nums mt-0.5">
                         KES {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -581,7 +581,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                 <div className="p-5 space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">{t('pos.payment.orderDiscount')}</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">{t('pos.payment.orderDiscount')}</label>
                         <input
                             type="number"
                             min="0"
@@ -600,7 +600,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('pos.payment.paymentMethod')}</label>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">{t('pos.payment.paymentMethod')}</label>
                             <button
                                 onClick={() => setSplitMode(v => !v)}
                                 className={`text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${splitMode ? 'bg-indigo-600 text-white' : 'text-indigo-600 hover:bg-indigo-50'}`}
@@ -619,7 +619,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                             <button
                                                 key={m}
                                                 onClick={() => onPaymentMethodChange(m)}
-                                                className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                                className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition ${paymentMethod === m
                                                     ? 'border-green-600 bg-green-600 text-white shadow-sm'
                                                     : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-green-300 hover:text-green-700'}`}
                                             >
@@ -636,7 +636,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                             <button
                                                 key={m}
                                                 onClick={() => onPaymentMethodChange(m)}
-                                                className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${paymentMethod === m
+                                                className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs sm:text-sm font-bold border-2 transition ${paymentMethod === m
                                                     ? 'border-green-600 bg-green-600 text-white shadow-sm'
                                                     : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-green-300 hover:text-green-700'}`}
                                             >
@@ -668,7 +668,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                 { key: 'gift_card', label: methodMeta['Gift Card'].label, Icon: methodMeta['Gift Card'].Icon },
                             ].map((line) => (
                                 <div key={line.key}>
-                                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
                                         <line.Icon className="w-3.5 h-3.5" /> {line.label}
                                     </label>
                                     <input
@@ -684,7 +684,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                             <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
                                             {selectedCustomer && selectedCustomer.storeCreditBalance < splitStoreCredit && (
                                                 <p className="text-[11px] text-red-500 mt-1">
-                                                    Insufficient balance — has KES {selectedCustomer.storeCreditBalance.toFixed(2)}
+                                                    Insufficient balance (has KES {selectedCustomer.storeCreditBalance.toFixed(2)})
                                                 </p>
                                             )}
                                         </div>
@@ -718,7 +718,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                     {!splitMode && paymentMethod === 'M-Pesa' && (
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Customer's M-Pesa Phone</label>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Customer's M-Pesa Phone</label>
                             <input
                                 autoFocus
                                 type="tel"
@@ -733,11 +733,11 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                     {!splitMode && paymentMethod === 'Store Credit' && (
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Customer</label>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Customer</label>
                             <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
                             {selectedCustomer && selectedCustomer.storeCreditBalance < total && (
                                 <p className="text-[11px] text-red-500 mt-1.5">
-                                    Insufficient balance — has KES {selectedCustomer.storeCreditBalance.toFixed(2)}, needs KES {total.toFixed(2)}
+                                    Insufficient balance (has KES {selectedCustomer.storeCreditBalance.toFixed(2)}), needs KES {total.toFixed(2)}
                                 </p>
                             )}
                         </div>
@@ -745,7 +745,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                     {!splitMode && paymentMethod === 'Gift Card' && (
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Gift Card Code</label>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Gift Card Code</label>
                             <input
                                 autoFocus
                                 value={giftCardInput}
@@ -768,7 +768,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
                                     </div>
                                 ) : (
                                     <p className="text-[11px] text-red-500 mt-1.5">
-                                        Balance KES {giftCardInfo.currentBalance.toFixed(2)} is less than the sale total — gift cards can't split-pay a sale
+                                        Balance KES {giftCardInfo.currentBalance.toFixed(2)} is less than the sale total. Gift cards can't split-pay a sale
                                     </p>
                                 )
                             )}
@@ -777,7 +777,7 @@ const PaymentModal = memo(({ isOpen, onClose, total, cartDiscount, onCartDiscoun
 
                     {!splitMode && paymentMethod === 'Cash' && (
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">{t('pos.payment.cashTendered')}</label>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">{t('pos.payment.cashTendered')}</label>
                             <input
                                 type="number"
                                 min={0}
@@ -911,7 +911,7 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-gradient-to-br from-white dark:from-gray-900 to-gray-50 dark:to-gray-900 rounded-sm border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                <div className="px-5 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-t-2xl">
+                <div className="px-5 py-4 bg-gray-900 dark:bg-gray-950 text-white rounded-t-2xl">
                     <p className="text-sm font-medium opacity-80">Layaway Total</p>
                     <p className="text-3xl font-black tabular-nums mt-0.5">
                         KES {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -920,12 +920,12 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
 
                 <div className="p-5 space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Customer</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Customer</label>
                         <CustomerPicker selected={selectedCustomer} onSelect={setSelectedCustomer} />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Deposit Amount</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Deposit Amount</label>
                         <input
                             type="number"
                             min="0"
@@ -939,18 +939,18 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">Balance due after deposit: KES {balanceAfterDeposit.toFixed(2)}</p>
                         )}
                         {depositNum >= total && depositNum > 0 && (
-                            <p className="text-[11px] text-red-500 mt-1">Deposit must be less than the total — pay in full as a normal sale instead</p>
+                            <p className="text-[11px] text-red-500 mt-1">Deposit must be less than the total. Pay in full as a normal sale instead</p>
                         )}
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Deposit Method</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Deposit Method</label>
                         <div className="grid grid-cols-2 gap-2">
                             {depositMethods.map(m => (
                                 <button
                                     key={m.key}
                                     onClick={() => setDepositMethod(m.key)}
-                                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all ${depositMethod === m.key
+                                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold border-2 transition ${depositMethod === m.key
                                         ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
                                         : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-indigo-300 hover:text-indigo-700'}`}
                                 >
@@ -962,12 +962,12 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
                     </div>
 
                     {depositMethod === 'store_credit' && selectedCustomer && depositNum > selectedCustomer.storeCreditBalance && (
-                        <p className="text-[11px] text-red-500">Insufficient balance — has KES {selectedCustomer.storeCreditBalance.toFixed(2)}</p>
+                        <p className="text-[11px] text-red-500">Insufficient balance (has KES {selectedCustomer.storeCreditBalance.toFixed(2)})</p>
                     )}
 
                     {depositMethod === 'gift_card' && (
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Gift Card Code</label>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Gift Card Code</label>
                             <input
                                 value={giftCardInput}
                                 onChange={e => setGiftCardInput(e.target.value)}
@@ -985,7 +985,7 @@ const LayawayModal = memo(({ isOpen, onClose, total, onConfirm, processing }) =>
                     )}
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Due Date (optional)</label>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Due Date (optional)</label>
                         <input
                             type="date"
                             value={dueDate}
@@ -1085,7 +1085,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                 <div id="receipt-print" className="p-6">
                     <div className="text-center mb-5">
                         <img src={businessSettings.logoPath} alt="Logo" className="w-12 h-12 object-contain mx-auto mb-2" onError={e => e.target.style.display='none'} />
-                        <h1 className="font-bold text-base tracking-widest text-gray-800 dark:text-gray-100">{businessSettings.name.toUpperCase()}</h1>
+                        <h1 className="font-semibold text-lg tracking-tight text-gray-900 dark:text-gray-100">{businessSettings.name}</h1>
                         <p className="text-[11px] text-gray-500 dark:text-gray-400">{businessSettings.address}</p>
                     </div>
 
@@ -1156,11 +1156,11 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                             <p className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5"><IconGift className="w-3.5 h-3.5" /> Gift Card{sale.giftCardsSold.length > 1 ? 's' : ''} Issued</p>
                             {sale.giftCardsSold.map((g, i) => (
                                 <div key={i} className="flex justify-between">
-                                    <span className="font-bold tracking-wider">{g.code}</span>
+                                    <span className="font-bold">{g.code}</span>
                                     <span>KES {g.amount.toFixed(2)}</span>
                                 </div>
                             ))}
-                            <p className="text-gray-500 dark:text-gray-400 text-[10px]">Keep this code safe — it's required to redeem the card.</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-[10px]">Keep this code safe. It’s required to redeem the card.</p>
                         </div>
                     )}
 
@@ -1178,7 +1178,7 @@ const ReceiptModal = memo(({ sale, onClose, onPrint }) => {
                         </div>
                     )}
                     {sale.etimsStatus === 'unreachable' && (
-                        <p className="text-center text-[9px] text-amber-500 mt-3">eTIMS invoice pending — will be submitted when reachable</p>
+                        <p className="text-center text-[9px] text-amber-500 mt-3">eTIMS invoice pending. It will be submitted when reachable.</p>
                     )}
 
                     <p className="text-center text-[10px] text-gray-500 dark:text-gray-400 mt-3">{businessSettings.receiptFooter}</p>
@@ -1266,9 +1266,9 @@ export default function POSPage() {
             const res = await api.post(`/shifts/${currentShift._id}/close`, { closingCount });
             const { discrepancy } = res.data;
             if (Math.abs(discrepancy) < 0.01) {
-                toast.success('Shift closed — drawer balanced');
+                toast.success('Shift closed: drawer balanced');
             } else {
-                toast.warning(`Shift closed — ${discrepancy > 0 ? 'over' : 'short'} by KES ${Math.abs(discrepancy).toFixed(2)}`);
+                toast.warning(`Shift closed: ${discrepancy > 0 ? 'over' : 'short'} by KES ${Math.abs(discrepancy).toFixed(2)}`);
             }
             setShowCloseShift(false);
             setCurrentShift(null);
@@ -1337,7 +1337,7 @@ export default function POSPage() {
             }),
         });
         if (result.synced > 0) toast.success(`${result.synced} queued sale${result.synced !== 1 ? 's' : ''} synced`);
-        if (result.failed > 0) toast.error(`${result.failed} queued sale${result.failed !== 1 ? 's' : ''} could not sync — needs attention`);
+        if (result.failed > 0) toast.error(`${result.failed} queued sale${result.failed !== 1 ? 's' : ''} could not sync and need${result.failed !== 1 ? '' : 's'} attention`);
         await refreshOfflineCounts();
         if (result.synced > 0) loadStyles(); // stock changed
     }, [refreshOfflineCounts, loadStyles]);
@@ -1627,7 +1627,7 @@ export default function POSPage() {
         } catch (err) {
             if (!err.response && offlineQueueable) {
                 await queueSale(payload);
-                toast.info('No connection — sale queued, will sync automatically once back online');
+                toast.info('No connection. Sale queued; it will sync once you’re back online.');
                 setCart([]);
                 setCartDiscount(0);
                 setShowPayment(false);
@@ -1735,7 +1735,7 @@ export default function POSPage() {
                         onError={e => { e.target.style.display = 'none'; }} />
                     <div className="leading-tight">
                         <p className="font-black text-gray-800 dark:text-gray-100 text-sm">{businessSettings.name}</p>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{businessSettings.tagline}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">{businessSettings.tagline}</p>
                     </div>
                 </div>
 
@@ -1772,7 +1772,7 @@ export default function POSPage() {
                             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${offlineCounts.failed > 0 ? 'bg-red-500' : 'bg-amber-500'}`} />
                             <span className="hidden sm:inline">
                                 {offlineCounts.pending > 0 && `${offlineCounts.pending} sale${offlineCounts.pending !== 1 ? 's' : ''} pending sync`}
-                                {offlineCounts.pending > 0 && offlineCounts.failed > 0 && ' · '}
+                                {offlineCounts.pending > 0 && offlineCounts.failed > 0 && ', '}
                                 {offlineCounts.failed > 0 && `${offlineCounts.failed} failed`}
                             </span>
                             <span className="sm:hidden">Sync</span>
@@ -1782,7 +1782,7 @@ export default function POSPage() {
                     {isOffline && (
                         <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 flex-shrink-0" title={cachedAt ? `Cached ${new Date(cachedAt).toLocaleString()}` : undefined}>
                             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                            Offline — cached stock
+                            Offline: cached stock
                         </div>
                     )}
 
@@ -1793,7 +1793,7 @@ export default function POSPage() {
                             title="Click to close this shift"
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                            <span className="hidden sm:inline">Shift open · KES {currentShift.openingFloat.toFixed(2)} float</span>
+                            <span className="hidden sm:inline whitespace-nowrap">Shift open (KES {currentShift.openingFloat.toFixed(2)} float)</span>
                             <span className="sm:hidden">Shift</span>
                         </button>
                     )}
@@ -1833,7 +1833,7 @@ export default function POSPage() {
                         onClick={handleLogout}
                         className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 border border-gray-200 dark:border-gray-700 hover:border-red-300 rounded-xl px-2.5 py-1.5 transition-colors ml-1"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
                         </svg>
                         <span className="hidden sm:inline">Logout</span>
@@ -1849,7 +1849,7 @@ export default function POSPage() {
 
                     <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-2.5 flex gap-2 flex-shrink-0">
                         <div className="relative flex-1">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                             <input
@@ -1880,11 +1880,11 @@ export default function POSPage() {
 
                         <button
                             onClick={() => setShowScanner(v => !v)}
-                            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${showScanner
+                            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border-2 transition ${showScanner
                                 ? 'bg-indigo-600 text-white border-indigo-600'
                                 : 'text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-300 bg-white dark:bg-gray-900'}`}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h.01M4 10h.01M4 14h.01M4 18h.01M8 6h8M8 10h8M8 14h8M8 18h8M20 6h.01M20 10h.01M20 14h.01M20 18h.01" />
                             </svg>
                             <span className="hidden sm:inline">{showScanner ? 'Close' : 'Scan'}</span>
@@ -1896,7 +1896,7 @@ export default function POSPage() {
                             title="Refresh stock"
                             className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:border-indigo-300 bg-white dark:bg-gray-900 transition-colors disabled:opacity-40"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                         </button>
@@ -1910,7 +1910,7 @@ export default function POSPage() {
                                 <button
                                     key={c}
                                     onClick={() => setCategory(c)}
-                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border capitalize transition-all ${active
+                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border capitalize transition ${active
                                         ? 'bg-indigo-600 text-white border-indigo-600'
                                         : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300 bg-white dark:bg-gray-900'}`}
                                 >
@@ -2014,17 +2014,17 @@ export default function POSPage() {
                                 onClick={() => setShowSellGiftCard(true)}
                                 title="Sell a gift card"
                                 aria-label="Sell a gift card"
-                                className="w-7 h-7 flex items-center justify-center text-indigo-600 hover:text-white hover:bg-indigo-500 rounded-xl transition-all border border-indigo-200 hover:border-indigo-500 flex-shrink-0"
+                                className="w-7 h-7 flex items-center justify-center text-indigo-600 hover:text-white hover:bg-indigo-500 rounded-xl transition border border-indigo-200 hover:border-indigo-500 flex-shrink-0"
                             >
                                 <IconGift className="w-4 h-4" />
                             </button>
                             {cart.length > 0 && (
-                                <button onClick={() => { setCart([]); setCartDiscount(0); }} className="text-xs text-red-500 hover:text-white hover:bg-red-500 px-2 py-0.5 rounded-lg font-semibold transition-all border border-red-200 hover:border-red-500">
+                                <button onClick={() => { setCart([]); setCartDiscount(0); }} className="text-xs text-red-500 hover:text-white hover:bg-red-500 px-2 py-0.5 rounded-lg font-semibold transition border border-red-200 hover:border-red-500">
                                     {t('pos.cart.clear')}
                                 </button>
                             )}
                             <button onClick={() => setMobileCartOpen(false)} className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
@@ -2035,7 +2035,7 @@ export default function POSPage() {
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-center py-16">
                                 <div className="w-16 h-16 rounded-sm bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-gray-300 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-gray-300 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                 </div>
@@ -2060,7 +2060,7 @@ export default function POSPage() {
                         <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 space-y-1">
                             {giftCardsToSell.map(g => (
                                 <div key={g.tempId} className="flex items-center justify-between text-xs bg-indigo-50 border border-indigo-100 rounded-xl px-2.5 py-1.5">
-                                    <span className="text-indigo-700 font-semibold flex items-center gap-1.5"><IconGift className="w-3.5 h-3.5" /> Gift Card · KES {g.amount.toFixed(2)}</span>
+                                    <span className="text-indigo-700 font-semibold flex items-center gap-1.5"><IconGift className="w-3.5 h-3.5" /> Gift card, KES {g.amount.toFixed(2)}</span>
                                     <button onClick={() => setGiftCardsToSell(prev => prev.filter(x => x.tempId !== g.tempId))} aria-label="Remove gift card" className="text-indigo-400 hover:text-red-500 transition-colors">×</button>
                                 </div>
                             ))}
@@ -2101,7 +2101,7 @@ export default function POSPage() {
                         >
                             {cart.length === 0
                                 ? (giftCardsToSell.length > 0 ? 'Add an item to check out with this gift card' : t('pos.cart.checkoutEmpty'))
-                                : `${t('pos.cart.checkout')}  ·  KES ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                                : `${t('pos.cart.checkout')}: KES ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                         </button>
                         {cart.length > 0 && (
                             <button

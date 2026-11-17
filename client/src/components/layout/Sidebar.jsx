@@ -34,7 +34,7 @@ const Sidebar = () => {
         // internally (overflow-y-auto) when there are more items than fit,
         // so the sidebar never forces the whole page to scroll and the
         // header/collapse toggle stay pinned in place while the nav list moves.
-        <aside className={`${collapsed ? 'w-16' : 'w-64'} h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col flex-shrink-0 transition-all duration-200`}>
+        <aside className={`${collapsed ? 'w-16' : 'w-64'} h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col flex-shrink-0 transition-colors duration-200`}>
             <div className={`flex items-center mb-6 flex-shrink-0 ${collapsed ? 'justify-center' : 'justify-between'}`}>
                 {!collapsed && <h2 className="text-xl font-bold px-1 text-gray-900 dark:text-gray-100">Admin Panel</h2>}
                 <button
